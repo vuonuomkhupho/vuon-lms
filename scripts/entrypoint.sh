@@ -107,11 +107,13 @@ except:
       --db-host '${DB_HOST}' \
       --db-port '${DB_PORT:-5432}' \
       --db-name '${DB_NAME:-railway}' \
-      --db-password '${DB_PASSWORD}' \
+      --db-root-username '${DB_USER:-postgres}' \
+      --db-root-password '${DB_PASSWORD}' \
       --admin-password '${ADMIN_PASSWORD:-admin}' \
       --install-app erpnext \
       --install-app lms \
-      --install-app dfp_external_storage"
+      --install-app dfp_external_storage \
+      --verbose"
   else
     su frappe -c "cd /home/frappe/frappe-bench && bench new-site '${SITE_NAME}' \
       --mariadb-root-password '${DB_PASSWORD}' \

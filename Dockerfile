@@ -1,9 +1,9 @@
 FROM frappe/bench:latest
 
-ARG FRAPPE_BRANCH=version-15
-ARG ERPNEXT_BRANCH=version-15
+ARG FRAPPE_BRANCH=version-16
+ARG ERPNEXT_BRANCH=version-16
 ARG LMS_BRANCH=main
-ARG DFP_BRANCH=version-15
+ARG DFP_BRANCH=develop
 
 USER frappe
 WORKDIR /home/frappe
