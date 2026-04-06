@@ -29,7 +29,8 @@
       "Bash(railway deploy:*)",
       "Bash(railway open:*)",
       "Bash(railway domain:*)",
-      "Bash(curl -s https://frappe-lms-production-7f97.up.railway.app)"
+      "Bash(curl -s https://frappe-lms-production-7f97.up.railway.app)",
+      "Bash(curl -sL https://frappe-lms-production-7f97.up.railway.app)"
     ]
   }
 }

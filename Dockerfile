@@ -1,7 +1,6 @@
 FROM frappe/bench:latest
 
 ARG FRAPPE_BRANCH=version-16
-ARG ERPNEXT_BRANCH=version-16
 ARG LMS_BRANCH=main
 ARG DFP_BRANCH=develop
 
@@ -17,9 +16,8 @@ RUN bench init \
 
 WORKDIR /home/frappe/frappe-bench
 
-# Install apps
-RUN bench get-app --branch=${ERPNEXT_BRANCH} erpnext && \
-    bench get-app --branch=${LMS_BRANCH} lms && \
+# Install apps — LMS only, no ERPNext
+RUN bench get-app --branch=${LMS_BRANCH} lms && \
     bench get-app --branch=${DFP_BRANCH} https://github.com/developmentforpeople/dfp_external_storage
 
 # Build frontend assets

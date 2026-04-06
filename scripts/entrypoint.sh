@@ -113,7 +113,6 @@ except:
       --db-root-username '${DB_USER:-postgres}' \
       --db-root-password '${DB_PASSWORD}' \
       --admin-password '${ADMIN_PASSWORD:-admin}' \
-      --install-app erpnext \
       --install-app lms \
       --install-app dfp_external_storage \
       --verbose" || echo "WARNING: bench new-site had errors, attempting migrate..."
@@ -121,7 +120,6 @@ except:
     su frappe -c "cd /home/frappe/frappe-bench && bench new-site '${SITE_NAME}' \
       --mariadb-root-password '${DB_PASSWORD}' \
       --admin-password '${ADMIN_PASSWORD:-admin}' \
-      --install-app erpnext \
       --install-app lms \
       --install-app dfp_external_storage \
       --no-mariadb-socket" || echo "WARNING: bench new-site had errors, attempting migrate..."
