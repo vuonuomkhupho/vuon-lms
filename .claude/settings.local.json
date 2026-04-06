@@ -37,7 +37,12 @@
       "Bash(npx shadcn@latest:*)",
       "Bash(npx drizzle-kit:*)",
       "Bash(npm run:*)",
-      "WebFetch(domain:www.nngroup.com)"
+      "WebFetch(domain:www.nngroup.com)",
+      "WebFetch(domain:blog.coursera.org)",
+      "WebFetch(domain:about.coursera.org)",
+      "WebFetch(domain:mobbin.com)",
+      "WebFetch(domain:www.coursera.org)",
+      "WebFetch(domain:medium.com)"
     ]
   }
 }

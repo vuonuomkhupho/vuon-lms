@@ -43,6 +43,131 @@ const MATERIAL_CONFIG: Record<string, { icon: string; label: string; color: stri
   link: { icon: "🔗", label: "Link", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
 };
 
+function MaterialEditor({
+  material,
+  courseId,
+  sessionId,
+  onDelete,
+  onUpdate,
+}: {
+  material: Material;
+  courseId: string;
+  sessionId: number;
+  onDelete: () => void;
+  onUpdate: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const config = MATERIAL_CONFIG[material.type];
+
+  async function saveMaterial(data: Record<string, unknown>) {
+    setSaving(true);
+    await fetch(`/api/materials/${material.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    setSaving(false);
+    toast.success("Đã lưu");
+    onUpdate();
+  }
+
+  return (
+    <div className={`rounded-xl border overflow-hidden transition-all ${expanded ? "shadow-sm" : ""} ${config.color}`}>
+      {/* Header — click to expand */}
+      <div
+        className="flex items-center gap-3 px-4 py-3 cursor-pointer"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <span className="text-lg">{config.icon}</span>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium">{material.title}</div>
+          <div className="text-xs opacity-60">
+            {material.type === "recap" && (material.contentText ? "Bấm để sửa nội dung" : "Chưa có nội dung — bấm để thêm")}
+            {material.type === "link" && (material.externalUrl || "Chưa có URL")}
+            {material.type === "pdf" && (material.r2Key ? "Đã upload" : "Chưa upload")}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {saving && <span className="text-xs opacity-60">Đang lưu...</span>}
+          <span className="text-xs opacity-50">{expanded ? "▲" : "▼"}</span>
+        </div>
+      </div>
+
+      {/* Expanded editor */}
+      {expanded && (
+        <div className="px-4 pb-4 border-t border-current/10 bg-white/50">
+          {/* Recap — editable textarea */}
+          {material.type === "recap" && (
+            <div className="mt-3">
+              <label className="text-xs font-medium text-[#636363] block mb-1">Nội dung recap</label>
+              <textarea
+                className="w-full min-h-[200px] p-3 text-sm border border-[#E0E0E0] rounded-lg resize-y outline-none focus:border-[#0056D2] focus:ring-1 focus:ring-[#0056D2] transition"
+                defaultValue={material.contentText || ""}
+                placeholder="Viết tóm tắt nội dung buổi học ở đây..."
+                onBlur={(e) => saveMaterial({ contentText: e.target.value })}
+              />
+            </div>
+          )}
+
+          {/* Link — editable title + URL */}
+          {material.type === "link" && (
+            <div className="mt-3 space-y-3">
+              <div>
+                <label className="text-xs font-medium text-[#636363] block mb-1">Tên tài liệu</label>
+                <input
+                  className="w-full px-3 py-2 text-sm border border-[#E0E0E0] rounded-lg outline-none focus:border-[#0056D2] transition"
+                  defaultValue={material.title}
+                  onBlur={(e) => saveMaterial({ title: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-[#636363] block mb-1">URL</label>
+                <input
+                  className="w-full px-3 py-2 text-sm border border-[#E0E0E0] rounded-lg outline-none focus:border-[#0056D2] transition"
+                  defaultValue={material.externalUrl || ""}
+                  placeholder="https://docs.google.com/..."
+                  onBlur={(e) => saveMaterial({ externalUrl: e.target.value })}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* PDF — upload zone if no file, file info if uploaded */}
+          {material.type === "pdf" && (
+            <div className="mt-3">
+              {material.r2Key ? (
+                <div className="text-sm text-[#636363]">
+                  File đã upload. <button className="text-[#0056D2] hover:underline" onClick={onDelete}>Xóa và upload lại</button>
+                </div>
+              ) : (
+                <FileUpload
+                  courseId={courseId}
+                  sessionId={sessionId}
+                  accept=".pdf,.ppt,.pptx"
+                  onUploadComplete={async (key) => {
+                    await saveMaterial({ r2Key: key });
+                  }}
+                />
+              )}
+            </div>
+          )}
+
+          {/* Delete button */}
+          <div className="mt-4 pt-3 border-t border-[#E0E0E0]">
+            <button
+              className="text-xs text-red-400 hover:text-red-600 transition"
+              onClick={onDelete}
+            >
+              Xóa tài liệu này
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function EditCoursePage() {
   const { id } = useParams();
   const router = useRouter();
@@ -367,39 +492,20 @@ export default function EditCoursePage() {
               <div className="mb-8">
                 <h4 className="text-sm font-medium text-muted-foreground mb-3">TÀI LIỆU</h4>
 
-                {/* Existing materials (non-video) */}
-                <div className="space-y-2 mb-4">
+                {/* Existing materials (non-video) — EDITABLE */}
+                <div className="space-y-3 mb-4">
                   {currentSession.materials
                     .filter((m) => m.type !== "video")
-                    .map((mat) => {
-                      const config = MATERIAL_CONFIG[mat.type];
-                      return (
-                        <div
-                          key={mat.id}
-                          className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-150 hover:shadow-sm ${config.color}`}
-                        >
-                          <span className="text-lg">{config.icon}</span>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium">{mat.title}</div>
-                            {mat.externalUrl && (
-                              <div className="text-xs opacity-60 truncate">{mat.externalUrl}</div>
-                            )}
-                            {mat.r2Key && (
-                              <div className="text-xs opacity-60">Đã upload</div>
-                            )}
-                            {mat.type === "recap" && !mat.contentText && (
-                              <div className="text-xs opacity-60">Chưa có nội dung</div>
-                            )}
-                          </div>
-                          <button
-                            className="text-xs opacity-40 hover:opacity-100 hover:text-red-600 transition"
-                            onClick={() => deleteMaterial(currentSession.id, mat.id)}
-                          >
-                            Xóa
-                          </button>
-                        </div>
-                      );
-                    })}
+                    .map((mat) => (
+                      <MaterialEditor
+                        key={mat.id}
+                        material={mat}
+                        courseId={id as string}
+                        sessionId={currentSession.id}
+                        onDelete={() => deleteMaterial(currentSession.id, mat.id)}
+                        onUpdate={loadCourse}
+                      />
+                    ))}
                 </div>
 
                 {/* Add material */}

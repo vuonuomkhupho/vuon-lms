@@ -10,26 +10,18 @@ export function VideoPlayer({ src }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    // Prevent right-click on video
     const video = videoRef.current;
     if (!video) return;
-
-    const handleContextMenu = (e: MouseEvent) => e.preventDefault();
-    video.addEventListener("contextmenu", handleContextMenu);
-
-    return () => {
-      video.removeEventListener("contextmenu", handleContextMenu);
-    };
+    const prevent = (e: MouseEvent) => e.preventDefault();
+    video.addEventListener("contextmenu", prevent);
+    return () => video.removeEventListener("contextmenu", prevent);
   }, []);
 
   return (
     <div
-      className="relative bg-black rounded-lg overflow-hidden select-none"
+      className="relative bg-[#1F1F1F] rounded-lg overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
       onContextMenu={(e) => e.preventDefault()}
     >
-      {/* Transparent overlay to prevent drag-to-save */}
-      <div className="absolute inset-0 z-10" style={{ pointerEvents: "none" }} />
-
       <video
         ref={videoRef}
         src={src}
@@ -38,10 +30,7 @@ export function VideoPlayer({ src }: VideoPlayerProps) {
         disablePictureInPicture
         playsInline
         className="w-full aspect-video"
-        onContextMenu={(e) => e.preventDefault()}
-      >
-        Trình duyệt không hỗ trợ video.
-      </video>
+      />
     </div>
   );
 }
