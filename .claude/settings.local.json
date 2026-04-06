@@ -22,7 +22,11 @@
       "Bash(git add:*)",
       "Bash(git commit -m ':*)",
       "Bash(railway up:*)",
-      "Bash(railway logs:*)"
+      "Bash(railway logs:*)",
+      "Bash(railway ssh:*)",
+      "Bash(python3:*)",
+      "Bash(railway link:*)",
+      "Bash(railway deploy:*)"
     ]
   }
 }
