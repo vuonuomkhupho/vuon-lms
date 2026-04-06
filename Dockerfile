@@ -31,5 +31,9 @@ RUN chmod +x /home/frappe/entrypoint.sh
 
 EXPOSE 8000 9000
 
+# Run as root so we can fix volume permissions at startup
+# The entrypoint handles running bench as the frappe user
+USER root
+
 ENTRYPOINT ["/home/frappe/entrypoint.sh"]
 CMD ["bench", "start"]

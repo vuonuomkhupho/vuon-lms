@@ -5,21 +5,26 @@ echo "=== Vuon LMS Entrypoint ==="
 cd /home/frappe/frappe-bench
 
 # ─── Volume mapping ───
-# Railway mounts persistent volumes at /data
-# Frappe expects sites at ./sites — we bridge them
+# Railway mounts persistent volumes at /data (owned by root)
+# Frappe expects sites at ./sites
 if [ -d "/data" ]; then
   echo "Volume detected at /data"
+
+  # Fix volume ownership for frappe user
+  chown -R frappe:frappe /data 2>/dev/null || true
 
   if [ ! -L "sites" ]; then
     echo "Initial setup: migrating sites/ to /data volume..."
 
-    # Copy initial sites content to volume if empty
-    if [ -z "$(ls -A /data 2>/dev/null)" ]; then
+    # Check if /data has real content (ignore lost+found)
+    REAL_FILES=$(ls /data 2>/dev/null | grep -v lost+found | head -1)
+
+    if [ -z "$REAL_FILES" ]; then
       echo "  /data is empty — copying sites/ content..."
       cp -a sites/. /data/
-      echo "  copied: $(ls /data)"
+      echo "  copied: $(ls /data | grep -v lost+found)"
     else
-      echo "  /data already has content: $(ls /data)"
+      echo "  /data already has content: $(ls /data | grep -v lost+found)"
     fi
 
     # Replace sites dir with symlink to volume
@@ -38,7 +43,7 @@ if [ ! -f "sites/apps.txt" ]; then
   echo "  apps.txt created: $(cat sites/apps.txt)"
 fi
 
-echo "apps.txt contents: $(cat sites/apps.txt)"
+echo "apps.txt: $(cat sites/apps.txt)"
 
 # ─── Build Redis URL with optional auth ───
 if [ -n "$REDIS_PASSWORD" ]; then
@@ -48,15 +53,18 @@ else
 fi
 
 # ─── Configure connections ───
-echo "Configuring database: ${DB_HOST:-mariadb}:${DB_PORT:-3306}"
+echo "Configuring DB: ${DB_HOST:-mariadb}:${DB_PORT:-3306}"
 echo "Configuring Redis: ${REDIS_HOST:-redis}:${REDIS_PORT:-6379}"
 
-bench set-config -g db_host "${DB_HOST:-mariadb}"
-bench set-config -gp db_port "${DB_PORT:-3306}"
-bench set-config -g redis_cache "${REDIS_URL}/0"
-bench set-config -g redis_queue "${REDIS_URL}/1"
-bench set-config -g redis_socketio "${REDIS_URL}/2"
-bench set-config -gp socketio_port 9000
+# Run bench commands as frappe user
+su frappe -c "cd /home/frappe/frappe-bench && bench set-config -g db_host '${DB_HOST:-mariadb}'"
+su frappe -c "cd /home/frappe/frappe-bench && bench set-config -gp db_port '${DB_PORT:-3306}'"
+su frappe -c "cd /home/frappe/frappe-bench && bench set-config -g redis_cache '${REDIS_URL}/0'"
+su frappe -c "cd /home/frappe/frappe-bench && bench set-config -g redis_queue '${REDIS_URL}/1'"
+su frappe -c "cd /home/frappe/frappe-bench && bench set-config -g redis_socketio '${REDIS_URL}/2'"
+su frappe -c "cd /home/frappe/frappe-bench && bench set-config -gp socketio_port 9000"
+
+echo "Configuration saved."
 
 # ─── Auto-create site on first run ───
 SITE_NAME="${FRAPPE_SITE_NAME:-lms.localhost}"
@@ -82,31 +90,31 @@ except:
       break
     fi
     if [ "$i" -eq 60 ]; then
-      echo "ERROR: Database not reachable after 60 attempts. Exiting."
+      echo "ERROR: Database not reachable after 60 attempts."
       exit 1
     fi
     echo "  attempt $i/60..."
     sleep 3
   done
 
-  bench new-site "${SITE_NAME}" \
-    --mariadb-root-password "${DB_PASSWORD}" \
-    --admin-password "${ADMIN_PASSWORD:-admin}" \
+  su frappe -c "cd /home/frappe/frappe-bench && bench new-site '${SITE_NAME}' \
+    --mariadb-root-password '${DB_PASSWORD}' \
+    --admin-password '${ADMIN_PASSWORD:-admin}' \
     --install-app erpnext \
     --install-app lms \
     --install-app dfp_external_storage \
-    --no-mariadb-socket
+    --no-mariadb-socket"
 
-  bench --site "${SITE_NAME}" set-config host_name "${HOST_NAME:-http://localhost:8000}"
-  bench --site "${SITE_NAME}" set-config developer_mode 1
+  su frappe -c "cd /home/frappe/frappe-bench && bench --site '${SITE_NAME}' set-config host_name '${HOST_NAME:-http://localhost:8000}'"
+  su frappe -c "cd /home/frappe/frappe-bench && bench --site '${SITE_NAME}' set-config developer_mode 1"
 
   echo "=== Site ${SITE_NAME} created successfully ==="
 fi
 
 # Set default site
-bench use "${SITE_NAME}"
+su frappe -c "cd /home/frappe/frappe-bench && bench use '${SITE_NAME}'"
 
-echo "=== Starting Frappe (bench start) ==="
+echo "=== Starting Frappe ==="
 
-# ─── Run the command (default: bench start) ───
-exec "$@"
+# Run bench start as frappe user
+exec su frappe -c "cd /home/frappe/frappe-bench && exec $*"

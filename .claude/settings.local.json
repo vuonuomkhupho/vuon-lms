@@ -20,7 +20,9 @@
       "Bash(gh repo:*)",
       "Bash(railway service:*)",
       "Bash(git add:*)",
-      "Bash(git commit -m ':*)"
+      "Bash(git commit -m ':*)",
+      "Bash(railway up:*)",
+      "Bash(railway logs:*)"
     ]
   }
 }
