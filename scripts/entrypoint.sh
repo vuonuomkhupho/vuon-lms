@@ -4,6 +4,9 @@ set -e
 echo "=== Vuon LMS Entrypoint ==="
 cd /home/frappe/frappe-bench
 
+# Frappe v16 expects /logs directory
+mkdir -p /logs && chown frappe:frappe /logs
+
 # ─── Volume mapping ───
 # Railway mounts persistent volumes at /data (owned by root)
 # Frappe expects sites at ./sites — we bridge them via symlink

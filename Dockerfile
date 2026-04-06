@@ -25,6 +25,9 @@ RUN bench get-app --branch=${ERPNEXT_BRANCH} erpnext && \
 # Build frontend assets
 RUN bench build
 
+# Frappe v16 expects /logs directory for logging
+RUN mkdir -p /logs && chown frappe:frappe /logs
+
 # Copy entrypoint
 COPY --chown=frappe:frappe scripts/entrypoint.sh /home/frappe/entrypoint.sh
 RUN chmod +x /home/frappe/entrypoint.sh
