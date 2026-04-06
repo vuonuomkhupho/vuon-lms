@@ -31,7 +31,10 @@
       "Bash(railway domain:*)",
       "Bash(curl -s https://frappe-lms-production-7f97.up.railway.app)",
       "Bash(curl -sL https://frappe-lms-production-7f97.up.railway.app)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm --no-turbopack)",
+      "Bash(npm install:*)",
+      "Bash(npx shadcn@latest:*)"
     ]
   }
 }

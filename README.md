@@ -1,90 +1,36 @@
-# Vuon LMS
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-Learning Management System built on [Frappe LMS](https://github.com/frappe/lms), deployed with Docker on Railway + Cloudflare R2.
+## Getting Started
 
-## Architecture
-
-```
-┌─────────────┐     ┌──────────────────────────────────────────┐     ┌──────────────┐
-│   Students  │────▶│  Frontend (Nginx)  :8080                 │     │ Cloudflare   │
-│   Browser   │     │    ├── Backend (Frappe)  :8000            │────▶│ R2 Storage   │
-└─────────────┘     │    ├── Websocket (Socket.IO)  :9000      │     │ (videos,     │
-                    │    ├── Worker (background jobs)           │     │  PDFs, etc.) │
-                    │    ├── Scheduler (cron)                   │     └──────────────┘
-                    │    ├── MariaDB  :3306                     │
-                    │    └── Redis  :6379                       │
-                    └──────────────────────────────────────────┘
-                              Railway / Docker Compose
-```
-
-## Quick Start (Local Docker)
+First, run the development server:
 
 ```bash
-# 1. Clone
-git clone <this-repo>
-cd vuon-lms
-
-# 2. Build custom image with LMS + R2 storage apps
-./scripts/build-image.sh vuon-lms:latest
-
-# 3. Configure
-cp .env.example .env
-# Edit .env — set DB_PASSWORD, ADMIN_PASSWORD
-
-# 4. Start all services
-docker compose up -d
-
-# 5. Create site and install apps
-docker compose exec backend bench new-site lms.localhost \
-  --mariadb-root-password <DB_PASSWORD> \
-  --admin-password <ADMIN_PASSWORD> \
-  --install-app erpnext \
-  --install-app lms \
-  --install-app dfp_external_storage
-
-# 6. Open http://localhost:8080
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-## Railway Deployment
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-See [`scripts/railway-setup.sh`](scripts/railway-setup.sh) for step-by-step Railway deployment instructions.
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-**Estimated cost**: ~$7-17/mo (Railway services + R2 storage)
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Cloudflare R2 Setup
+## Learn More
 
-See [`scripts/setup-r2-storage.md`](scripts/setup-r2-storage.md) for R2 bucket creation, API keys, and Frappe configuration.
+To learn more about Next.js, take a look at the following resources:
 
-**Estimated cost**: ~$0.50/mo for 20 course sessions
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-## Project Structure
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-```
-vuon-lms/
-├── apps.json              # Frappe apps to include (LMS, DFP External Storage)
-├── docker-compose.yml     # Local/production Docker Compose
-├── Containerfile          # Reference Containerfile
-├── .env.example           # Environment variables template
-├── .gitignore
-└── scripts/
-    ├── build-image.sh         # Build custom Docker image
-    ├── railway-setup.sh       # Railway deployment guide
-    └── setup-r2-storage.md    # R2 storage configuration
-```
+## Deploy on Vercel
 
-## Content Types per Session
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-| Type | Format | Storage |
-|------|--------|---------|
-| Video recording | MP4/WebM | R2 bucket |
-| Slides | PDF/images | R2 bucket |
-| Recap | Text/mindmap | Frappe DB |
-| Attached docs | Google Docs/Sheets links | Frappe DB (URLs only) |
-
-## Tech Stack
-
-- **LMS**: [Frappe LMS](https://github.com/frappe/lms) (Python/Vue.js)
-- **Storage**: [Cloudflare R2](https://developers.cloudflare.com/r2/) via [DFP External Storage](https://github.com/developmentforpeople/dfp_external_storage)
-- **Database**: MariaDB 11.4
-- **Cache/Queue**: Redis 7
-- **Hosting**: Railway (or any Docker host)
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
