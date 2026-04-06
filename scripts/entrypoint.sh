@@ -73,17 +73,24 @@ if [ ! -f "sites/${SITE_NAME}/site_config.json" ]; then
   # Wait for DB
   echo "Waiting for ${DB_TYPE} at ${DB_HOST}:${DB_PORT:-$DB_DEFAULT_PORT}..."
   for i in $(seq 1 60); do
-    if python3 -c "
+    if [ "$DB_TYPE" = "postgres" ]; then
+      # Use pg_isready for PostgreSQL (handles IPv6 properly)
+      if pg_isready -h "${DB_HOST}" -p "${DB_PORT:-5432}" -q 2>/dev/null; then
+        echo "Database is ready."
+        break
+      fi
+    else
+      if python3 -c "
 import socket
 try:
-    s = socket.create_connection(('${DB_HOST:-localhost}', ${DB_PORT:-$DB_DEFAULT_PORT}), timeout=5)
+    s = socket.create_connection(('${DB_HOST:-localhost}', ${DB_PORT:-3306}), timeout=5)
     s.close()
-    exit(0)
 except:
     exit(1)
 " 2>/dev/null; then
-      echo "Database is ready."
-      break
+        echo "Database is ready."
+        break
+      fi
     fi
     if [ "$i" -eq 60 ]; then
       echo "ERROR: Database not reachable after 60 attempts."
