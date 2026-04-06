@@ -77,10 +77,8 @@ if [ ! -f "sites/${SITE_NAME}/site_config.json" ]; then
   for i in $(seq 1 60); do
     if python3 -c "
 import socket
-s = socket.socket()
 try:
-    s.settimeout(2)
-    s.connect(('${DB_HOST:-mariadb}', ${DB_PORT:-3306}))
+    s = socket.create_connection(('${DB_HOST:-mariadb}', ${DB_PORT:-3306}), timeout=5)
     s.close()
     exit(0)
 except:
