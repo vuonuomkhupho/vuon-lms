@@ -1,0 +1,14 @@
+[
+  {
+    "url": "https://github.com/frappe/erpnext",
+    "branch": "version-15"
+  },
+  {
+    "url": "https://github.com/frappe/lms",
+    "branch": "main"
+  },
+  {
+    "url": "https://github.com/developmentforpeople/dfp_external_storage",
+    "branch": "version-15"
+  }
+]

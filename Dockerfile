@@ -1,0 +1,35 @@
+FROM frappe/bench:latest
+
+ARG FRAPPE_BRANCH=version-15
+ARG ERPNEXT_BRANCH=version-15
+ARG LMS_BRANCH=main
+ARG DFP_BRANCH=version-15
+
+USER frappe
+WORKDIR /home/frappe
+
+# Initialize bench with Frappe framework
+RUN bench init \
+  --frappe-branch=${FRAPPE_BRANCH} \
+  --skip-redis-config-generation \
+  --skip-assets \
+  frappe-bench
+
+WORKDIR /home/frappe/frappe-bench
+
+# Install apps
+RUN bench get-app --branch=${ERPNEXT_BRANCH} erpnext && \
+    bench get-app --branch=${LMS_BRANCH} lms && \
+    bench get-app --branch=${DFP_BRANCH} https://github.com/developmentforpeople/dfp_external_storage
+
+# Build frontend assets
+RUN bench build
+
+# Copy entrypoint
+COPY --chown=frappe:frappe scripts/entrypoint.sh /home/frappe/entrypoint.sh
+RUN chmod +x /home/frappe/entrypoint.sh
+
+EXPOSE 8000 9000
+
+ENTRYPOINT ["/home/frappe/entrypoint.sh"]
+CMD ["bench", "start"]

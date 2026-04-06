@@ -1,0 +1,7 @@
+.git
+.claude
+.env
+.frappe_docker
+*.md
+!scripts/*.md
+docker-compose.yml
