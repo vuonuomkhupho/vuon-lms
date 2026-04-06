@@ -4,11 +4,19 @@ import { courses } from "@/lib/schema";
 import { requireAdmin } from "@/lib/auth-server";
 import { createCourseSchema } from "@/lib/validations";
 
-// GET /api/courses — list all courses (admin)
+// GET /api/courses — list all courses with sessions (admin)
 export async function GET() {
   try {
     await requireAdmin();
-    const allCourses = await db.select().from(courses).orderBy(courses.createdAt);
+    const allCourses = await db.query.courses.findMany({
+      orderBy: (c, { desc }) => [desc(c.updatedAt)],
+      with: {
+        sessions: {
+          orderBy: (s, { asc }) => [asc(s.orderIndex)],
+          with: { materials: true },
+        },
+      },
+    });
     return NextResponse.json(allCourses);
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

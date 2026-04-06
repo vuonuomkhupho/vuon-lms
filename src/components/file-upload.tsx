@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { Upload } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 
@@ -24,23 +25,16 @@ export function FileUpload({ courseId, sessionId, accept, onUploadComplete }: Fi
     setProgress(5);
 
     try {
-      // Get presigned URL
       const res = await fetch("/api/upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          filename: file.name,
-          contentType: file.type,
-          courseId,
-          sessionId,
-        }),
+        body: JSON.stringify({ filename: file.name, contentType: file.type, courseId, sessionId }),
       });
 
       if (!res.ok) throw new Error("Không thể tạo upload URL");
       const { uploadUrl, key } = await res.json();
       setProgress(15);
 
-      // Upload with XMLHttpRequest for progress tracking
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.upload.addEventListener("progress", (e) => {
@@ -49,12 +43,8 @@ export function FileUpload({ courseId, sessionId, accept, onUploadComplete }: Fi
           }
         });
         xhr.addEventListener("load", () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            setProgress(100);
-            resolve();
-          } else {
-            reject(new Error(`Upload failed: ${xhr.status}`));
-          }
+          if (xhr.status >= 200 && xhr.status < 300) { setProgress(100); resolve(); }
+          else reject(new Error(`Upload failed: ${xhr.status}`));
         });
         xhr.addEventListener("error", () => reject(new Error("Upload failed")));
         xhr.open("PUT", uploadUrl);
@@ -75,10 +65,10 @@ export function FileUpload({ courseId, sessionId, accept, onUploadComplete }: Fi
   return (
     <div
       className={`
-        relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 cursor-pointer
+        relative border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 cursor-pointer
         ${dragOver
           ? "border-primary bg-primary/5 scale-[1.01]"
-          : "border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50/50"
+          : "border-border hover:border-muted-foreground/30 hover:bg-muted/30"
         }
         ${uploading ? "pointer-events-none" : ""}
       `}
@@ -91,6 +81,8 @@ export function FileUpload({ courseId, sessionId, accept, onUploadComplete }: Fi
         if (file) handleFile(file);
       }}
       onClick={() => !uploading && inputRef.current?.click()}
+      role="button"
+      aria-label="Upload file"
     >
       <input
         ref={inputRef}
@@ -105,7 +97,7 @@ export function FileUpload({ courseId, sessionId, accept, onUploadComplete }: Fi
 
       {uploading ? (
         <div className="space-y-3">
-          <div className="text-sm font-medium">{fileName}</div>
+          <div className="text-sm font-medium truncate">{fileName}</div>
           <Progress value={progress} className="h-2 w-64 mx-auto" />
           <div className="text-xs text-muted-foreground">
             {progress < 100 ? `Đang upload... ${progress}%` : "Hoàn tất!"}
@@ -113,14 +105,12 @@ export function FileUpload({ courseId, sessionId, accept, onUploadComplete }: Fi
         </div>
       ) : (
         <div className="space-y-2">
-          <div className="text-3xl">
-            {dragOver ? "📥" : "📁"}
-          </div>
+          <Upload className="w-8 h-8 mx-auto text-muted-foreground/60" strokeWidth={1.5} />
           <div className="text-sm text-muted-foreground">
             Kéo thả file hoặc{" "}
             <span className="text-primary font-medium">bấm để chọn</span>
           </div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-xs text-muted-foreground/60">
             Video, PDF, Slide, Hình ảnh
           </div>
         </div>

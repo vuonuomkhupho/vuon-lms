@@ -10,6 +10,7 @@ export const createCourseSchema = z.object({
 export const updateCourseSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   description: z.string().max(2000).nullable().optional(),
+  thumbnailR2Key: z.string().max(500).nullable().optional(),
   isPublished: z.boolean().optional(),
 });
 

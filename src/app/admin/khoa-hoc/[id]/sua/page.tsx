@@ -3,6 +3,10 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { ChevronLeft, ChevronDown, Plus, X, Check, ExternalLink, Video, FileText, PenLine, Link as LinkIcon, BookOpen, MousePointerClick, GripVertical, Settings, CircleAlert } from "lucide-react";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -42,6 +46,7 @@ interface Course {
   title: string;
   slug: string;
   description: string | null;
+  thumbnailR2Key: string | null;
   isPublished: boolean;
   sessions: Session[];
 }
@@ -51,44 +56,28 @@ interface Course {
 const MATERIAL_TYPES = [
   {
     type: "video" as const,
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-      </svg>
-    ),
+    icon: Video,
     label: "Video",
     description: "Upload video bài giảng",
     colors: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800",
   },
   {
     type: "pdf" as const,
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
-      </svg>
-    ),
+    icon: FileText,
     label: "Tài liệu",
     description: "PDF, slide, hình ảnh",
     colors: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800",
   },
   {
     type: "recap" as const,
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-      </svg>
-    ),
+    icon: PenLine,
     label: "Recap",
     description: "Tóm tắt nội dung",
     colors: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800",
   },
   {
     type: "link" as const,
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
-      </svg>
-    ),
+    icon: LinkIcon,
     label: "Link",
     description: "Google Docs, bài viết",
     colors: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800",
@@ -140,7 +129,7 @@ function MaterialCard({
           onClick={() => setExpanded(!expanded)}
         >
           <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${config.colors}`}>
-            {config.icon}
+            <config.icon className="w-4 h-4" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium truncate">{material.title}</div>
@@ -149,12 +138,7 @@ function MaterialCard({
           {saving && (
             <span className="text-xs text-muted-foreground animate-pulse">Lưu...</span>
           )}
-          <svg
-            width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"
-            className={`text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`}
-          >
-            <path d="M4 6l4 4 4-4"/>
-          </svg>
+          <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
         </div>
 
         {expanded && (
@@ -194,7 +178,7 @@ function MaterialCard({
               <div className="mt-3">
                 {material.r2Key ? (
                   <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-500 shrink-0"><path d="M20 6L9 17l-5-5"/></svg>
+                    <Check className="w-4 h-4 text-success shrink-0" />
                     <span className="text-sm text-muted-foreground flex-1">File đã upload</span>
                     <button className="text-xs text-destructive hover:underline" onClick={() => setConfirmDelete(true)}>Xóa</button>
                   </div>
@@ -208,7 +192,7 @@ function MaterialCard({
               <div className="mt-3">
                 {material.r2Key ? (
                   <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-500 shrink-0"><path d="M20 6L9 17l-5-5"/></svg>
+                    <Check className="w-4 h-4 text-success shrink-0" />
                     <span className="text-sm text-muted-foreground flex-1">{material.title}</span>
                     <button className="text-xs text-destructive hover:underline" onClick={() => setConfirmDelete(true)}>Xóa</button>
                   </div>
@@ -232,6 +216,105 @@ function MaterialCard({
   );
 }
 
+// ─── Sortable Session Item ───
+
+function SortableSessionItem({
+  session,
+  idx,
+  isSelected,
+  hasVideo,
+  hasContent,
+  editingTitle,
+  editTitleRef,
+  onSelect,
+  onDoubleClick,
+  onRename,
+  onCancelEdit,
+  onDelete,
+}: {
+  session: Session;
+  idx: number;
+  isSelected: boolean;
+  hasVideo: boolean;
+  hasContent: boolean;
+  editingTitle: number | null;
+  editTitleRef: React.RefObject<HTMLInputElement | null>;
+  onSelect: () => void;
+  onDoubleClick: () => void;
+  onRename: (title: string) => void;
+  onCancelEdit: () => void;
+  onDelete: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: session.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`
+        group flex items-center gap-1 pl-1 pr-2 py-2.5 rounded-lg cursor-pointer transition-colors
+        ${isSelected ? "bg-primary/10 ring-1 ring-primary/20" : "hover:bg-muted/70"}
+      `}
+      onClick={onSelect}
+      onDoubleClick={onDoubleClick}
+    >
+      <button
+        className="w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-60 hover:opacity-100 cursor-grab active:cursor-grabbing shrink-0 touch-none"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
+      </button>
+
+      <div className={`
+        w-6 h-6 rounded-md flex items-center justify-center text-[11px] font-semibold shrink-0 transition
+        ${isSelected
+          ? "bg-primary text-primary-foreground"
+          : hasVideo
+            ? "bg-success/15 text-success"
+            : hasContent
+              ? "bg-warning/15 text-warning"
+              : "bg-muted text-muted-foreground"
+        }
+      `}>
+        {hasVideo ? <Check className="w-3 h-3" /> : idx + 1}
+      </div>
+
+      <div className="flex-1 min-w-0 ml-1.5">
+        {editingTitle === session.id ? (
+          <input
+            ref={editTitleRef}
+            className="w-full bg-background text-sm rounded px-1.5 py-0.5 outline-none ring-1 ring-primary"
+            defaultValue={session.title}
+            onBlur={(e) => onRename(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") onRename(e.currentTarget.value);
+              if (e.key === "Escape") onCancelEdit();
+            }}
+          />
+        ) : (
+          <span className={`text-sm truncate block ${isSelected ? "font-medium" : ""}`}>
+            {session.title}
+          </span>
+        )}
+      </div>
+
+      <button
+        className="w-6 h-6 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition shrink-0"
+        onClick={(e) => { e.stopPropagation(); onDelete(); }}
+      >
+        <X className="w-3 h-3" />
+      </button>
+    </div>
+  );
+}
+
 // ─── Main Editor ───
 
 export default function EditCoursePage() {
@@ -245,8 +328,15 @@ export default function EditCoursePage() {
   const [linkDialog, setLinkDialog] = useState<number | null>(null);
   const [linkTitle, setLinkTitle] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
+  const [publishCheckOpen, setPublishCheckOpen] = useState(false);
+  const [rightTab, setRightTab] = useState<"content" | "settings">("content");
   const newSessionRef = useRef<HTMLInputElement>(null);
   const editTitleRef = useRef<HTMLInputElement>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
   const loadCourse = useCallback(async () => {
     const res = await fetch(`/api/courses/${id}`);
@@ -354,6 +444,43 @@ export default function EditCoursePage() {
     loadCourse();
   }
 
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !course) return;
+
+    const oldIndex = course.sessions.findIndex((s) => s.id === active.id);
+    const newIndex = course.sessions.findIndex((s) => s.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    // Optimistic reorder
+    const reordered = [...course.sessions];
+    const [moved] = reordered.splice(oldIndex, 1);
+    reordered.splice(newIndex, 0, moved);
+    setCourse({ ...course, sessions: reordered });
+
+    // Persist new order
+    await Promise.all(
+      reordered.map((s, i) =>
+        fetch(`/api/courses/${id}/sessions/${s.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderIndex: i }),
+        })
+      )
+    );
+    toast.success("Đã sắp xếp lại");
+    loadCourse();
+  }
+
+  function handlePublishClick() {
+    if (!course) return;
+    if (course.isPublished) {
+      updateCourse({ isPublished: false });
+      return;
+    }
+    setPublishCheckOpen(true);
+  }
+
   async function handleFileUpload(sessionId: number, key: string, file: File) {
     const type = file.type.startsWith("video/") ? "video" : "pdf";
     await fetch(`/api/courses/${id}/sessions/${sessionId}/materials`, {
@@ -413,7 +540,7 @@ export default function EditCoursePage() {
                 onClick={() => router.push("/admin/khoa-hoc")}
                 className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center transition shrink-0"
               >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 12L6 8l4-4"/></svg>
+                <ChevronLeft className="w-4 h-4" />
               </TooltipTrigger>
               <TooltipContent>Quay lại danh sách</TooltipContent>
             </Tooltip>
@@ -435,7 +562,7 @@ export default function EditCoursePage() {
                   onClick={() => window.open(`/khoa-hoc/${course.slug}`, "_blank")}
                   className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center transition"
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                  <ExternalLink className="w-3.5 h-3.5" />
                 </TooltipTrigger>
                 <TooltipContent>Xem trang khóa học</TooltipContent>
               </Tooltip>
@@ -446,7 +573,7 @@ export default function EditCoursePage() {
             <Button
               size="sm"
               variant={course.isPublished ? "outline" : "default"}
-              onClick={() => updateCourse({ isPublished: !course.isPublished })}
+              onClick={handlePublishClick}
             >
               {course.isPublished ? "Chuyển nháp" : "Xuất bản"}
             </Button>
@@ -467,83 +594,40 @@ export default function EditCoursePage() {
               </span>
             </div>
 
-            {/* Session list */}
+            {/* Session list — drag-and-drop sortable */}
             <ScrollArea className="flex-1">
-              <div className="p-2 space-y-0.5">
-                {course.sessions.map((session, idx) => {
-                  const isSelected = selectedSession === session.id;
-                  const hasContent = session.materials.length > 0;
-                  const hasVideo = session.materials.some((m) => m.type === "video" && m.r2Key);
-
-                  return (
-                    <div
-                      key={session.id}
-                      className={`
-                        group flex items-center gap-2.5 pl-3 pr-2 py-2.5 rounded-lg cursor-pointer transition-all
-                        ${isSelected ? "bg-primary/10 ring-1 ring-primary/20" : "hover:bg-muted/70"}
-                      `}
-                      onClick={() => setSelectedSession(session.id)}
-                      onDoubleClick={() => {
-                        setEditingTitle(session.id);
-                        setTimeout(() => editTitleRef.current?.focus(), 50);
-                      }}
-                    >
-                      {/* Number / status */}
-                      <div className={`
-                        w-6 h-6 rounded-md flex items-center justify-center text-[11px] font-semibold shrink-0 transition
-                        ${isSelected
-                          ? "bg-primary text-primary-foreground"
-                          : hasVideo
-                            ? "bg-green-500/15 text-green-600 dark:text-green-400"
-                            : hasContent
-                              ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
-                              : "bg-muted text-muted-foreground"
-                        }
-                      `}>
-                        {hasVideo ? (
-                          <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M13.854 3.646a.5.5 0 010 .708l-7 7a.5.5 0 01-.708 0l-3.5-3.5a.5.5 0 11.708-.708L6.5 10.293l6.646-6.647a.5.5 0 01.708 0z"/></svg>
-                        ) : (
-                          idx + 1
-                        )}
-                      </div>
-
-                      {/* Title */}
-                      <div className="flex-1 min-w-0">
-                        {editingTitle === session.id ? (
-                          <input
-                            ref={editTitleRef}
-                            className="w-full bg-background text-sm rounded px-1.5 py-0.5 outline-none ring-1 ring-primary"
-                            defaultValue={session.title}
-                            onBlur={(e) => renameSession(session.id, e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") renameSession(session.id, e.currentTarget.value);
-                              if (e.key === "Escape") setEditingTitle(null);
-                            }}
-                          />
-                        ) : (
-                          <span className={`text-sm truncate block ${isSelected ? "font-medium" : ""}`}>
-                            {session.title}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Delete */}
-                      <button
-                        className="w-6 h-6 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition shrink-0"
-                        onClick={(e) => { e.stopPropagation(); setDeleteSessionTarget(session); }}
-                      >
-                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4l8 8M12 4l-8 8"/></svg>
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={course.sessions.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+                  <div className="p-2 space-y-0.5">
+                    {course.sessions.map((session, idx) => (
+                      <SortableSessionItem
+                        key={session.id}
+                        session={session}
+                        idx={idx}
+                        isSelected={selectedSession === session.id}
+                        hasVideo={session.materials.some((m) => m.type === "video" && m.r2Key)}
+                        hasContent={session.materials.length > 0}
+                        editingTitle={editingTitle}
+                        editTitleRef={editTitleRef}
+                        onSelect={() => setSelectedSession(session.id)}
+                        onDoubleClick={() => {
+                          setEditingTitle(session.id);
+                          setTimeout(() => editTitleRef.current?.focus(), 50);
+                        }}
+                        onRename={(title) => renameSession(session.id, title)}
+                        onCancelEdit={() => setEditingTitle(null)}
+                        onDelete={() => setDeleteSessionTarget(session)}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
             </ScrollArea>
 
             {/* Add session */}
             <div className="p-3 border-t bg-background">
               <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-dashed hover:border-primary/40 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20 transition">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted-foreground shrink-0"><path d="M8 3v10M3 8h10"/></svg>
+                <Plus className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                 <input
                   ref={newSessionRef}
                   className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/50"
@@ -560,8 +644,94 @@ export default function EditCoursePage() {
           </div>
 
           {/* ═══ Right panel ═══ */}
-          <div className="flex-1 overflow-y-auto bg-muted/20">
-            {currentSession ? (
+          <div className="flex-1 overflow-hidden flex flex-col bg-muted/20">
+            {/* Tab switcher */}
+            <div className="flex items-center gap-1 px-6 pt-4 shrink-0">
+              <button
+                onClick={() => setRightTab("content")}
+                className={`px-3 py-1.5 text-sm rounded-md transition ${rightTab === "content" ? "bg-background shadow-sm font-medium" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                Nội dung
+              </button>
+              <button
+                onClick={() => setRightTab("settings")}
+                className={`px-3 py-1.5 text-sm rounded-md transition flex items-center gap-1.5 ${rightTab === "settings" ? "bg-background shadow-sm font-medium" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                <Settings className="w-3.5 h-3.5" />
+                Cài đặt
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              {/* ═══ Settings tab ═══ */}
+              {rightTab === "settings" && (
+                <div className="max-w-2xl mx-auto px-6 lg:px-8 py-8">
+                  <h2 className="text-xl font-bold mb-6">Cài đặt khóa học</h2>
+
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <Label>Tên khóa học</Label>
+                      <Input
+                        defaultValue={course.title}
+                        key={`settings-title-${course.title}`}
+                        onBlur={(e) => {
+                          if (e.target.value && e.target.value !== course.title) updateCourse({ title: e.target.value });
+                        }}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Mô tả</Label>
+                      <Textarea
+                        defaultValue={course.description || ""}
+                        key={`settings-desc-${course.id}`}
+                        placeholder="Mô tả ngắn giúp học viên hiểu khóa học..."
+                        rows={4}
+                        onBlur={(e) => {
+                          const val = e.target.value || null;
+                          if (val !== course.description) updateCourse({ description: val } as Partial<Course>);
+                        }}
+                      />
+                      <p className="text-xs text-muted-foreground">Hiển thị trên trang chi tiết khóa học</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Thumbnail</Label>
+                      {course.thumbnailR2Key ? (
+                        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                          <Check className="w-4 h-4 text-success shrink-0" />
+                          <span className="text-sm text-muted-foreground flex-1">Đã upload thumbnail</span>
+                          <button
+                            className="text-xs text-destructive hover:underline"
+                            onClick={() => updateCourse({ thumbnailR2Key: null } as Partial<Course>)}
+                          >
+                            Xóa
+                          </button>
+                        </div>
+                      ) : (
+                        <FileUpload
+                          courseId={id as string}
+                          sessionId={0}
+                          accept="image/*"
+                          onUploadComplete={async (key) => {
+                            await updateCourse({ thumbnailR2Key: key } as Partial<Course>);
+                          }}
+                        />
+                      )}
+                      <p className="text-xs text-muted-foreground">Hình ảnh đại diện cho khóa học</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Slug</Label>
+                      <Input value={course.slug} disabled className="bg-muted" />
+                      <p className="text-xs text-muted-foreground">URL: /khoa-hoc/{course.slug}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ═══ Content tab ═══ */}
+              {rightTab === "content" && currentSession ? (
               <div className="max-w-2xl mx-auto px-6 lg:px-8 py-8">
                 {/* Session header */}
                 <div className="mb-8">
@@ -569,16 +739,16 @@ export default function EditCoursePage() {
                     <span className={`
                       px-2 py-0.5 rounded text-[11px] font-medium
                       ${currentSession.materials.some((m) => m.type === "video" && m.r2Key)
-                        ? "bg-green-500/15 text-green-600 dark:text-green-400"
+                        ? "bg-success/15 text-success"
                         : currentSession.materials.length > 0
-                          ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                          ? "bg-warning/15 text-warning"
                           : "bg-muted text-muted-foreground"
                       }
                     `}>
                       Buổi {sessionIdx + 1}
                     </span>
                     {currentSession.materials.some((m) => m.type === "video" && m.r2Key) && (
-                      <span className="text-[11px] text-green-600 dark:text-green-400">Sẵn sàng</span>
+                      <span className="text-[11px] text-success">Sẵn sàng</span>
                     )}
                   </div>
                   <input
@@ -628,7 +798,7 @@ export default function EditCoursePage() {
                           className="flex items-center gap-3 p-3.5 rounded-lg border border-dashed hover:border-primary/40 hover:bg-primary/5 transition text-left group"
                         >
                           <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${mt.colors} transition`}>
-                            {mt.icon}
+                            <mt.icon className="w-5 h-5" />
                           </div>
                           <div>
                             <div className="text-sm font-medium group-hover:text-primary transition">{mt.label}</div>
@@ -649,16 +819,14 @@ export default function EditCoursePage() {
                   </div>
                 </div>
               </div>
-            ) : (
+            ) : rightTab === "content" ? (
               /* ═══ Empty state — no session selected ═══ */
               <div className="flex items-center justify-center h-full">
                 <div className="text-center max-w-sm px-6">
                   {course.sessions.length === 0 ? (
                     <>
-                      <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mx-auto mb-6">
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-primary">
-                          <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-                        </svg>
+                      <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-6">
+                        <BookOpen className="w-8 h-8 text-primary" strokeWidth={1.5} />
                       </div>
                       <h3 className="text-lg font-semibold mb-2">Xây dựng chương trình học</h3>
                       <p className="text-sm text-muted-foreground mb-6">
@@ -672,14 +840,15 @@ export default function EditCoursePage() {
                   ) : (
                     <>
                       <div className="w-16 h-16 rounded-xl bg-muted flex items-center justify-center mx-auto mb-4">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted-foreground"><path d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5"/></svg>
+                        <MousePointerClick className="w-6 h-6 text-muted-foreground" />
                       </div>
                       <p className="text-muted-foreground">Chọn một buổi học để chỉnh sửa nội dung</p>
                     </>
                   )}
                 </div>
               </div>
-            )}
+            ) : null}
+            </div>
           </div>
         </div>
       </div>
@@ -694,6 +863,45 @@ export default function EditCoursePage() {
         destructive
         onConfirm={() => deleteSessionTarget && deleteSession(deleteSessionTarget)}
       />
+
+      {/* Publish validation checklist */}
+      <Dialog open={publishCheckOpen} onOpenChange={setPublishCheckOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Xuất bản khóa học</DialogTitle>
+          </DialogHeader>
+          {course && (() => {
+            const checks = [
+              { label: "Có ít nhất 1 buổi học", ok: course.sessions.length > 0 },
+              { label: "Có buổi học chứa nội dung", ok: course.sessions.some((s) => s.materials.length > 0) },
+              { label: "Có mô tả khóa học", ok: !!course.description },
+            ];
+            const allOk = checks.every((c) => c.ok);
+            return (
+              <div className="py-2">
+                <div className="space-y-3 mb-6">
+                  {checks.map((check, i) => (
+                    <div key={i} className="flex items-center gap-3 text-sm">
+                      {check.ok ? (
+                        <Check className="w-4 h-4 text-success shrink-0" />
+                      ) : (
+                        <CircleAlert className="w-4 h-4 text-warning shrink-0" />
+                      )}
+                      <span className={check.ok ? "" : "text-muted-foreground"}>{check.label}</span>
+                    </div>
+                  ))}
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setPublishCheckOpen(false)}>Hủy</Button>
+                  <Button onClick={() => { setPublishCheckOpen(false); updateCourse({ isPublished: true }); }}>
+                    {allOk ? "Xuất bản" : "Xuất bản dù sao"}
+                  </Button>
+                </DialogFooter>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={linkDialog !== null} onOpenChange={(open) => !open && setLinkDialog(null)}>
         <DialogContent className="sm:max-w-md">

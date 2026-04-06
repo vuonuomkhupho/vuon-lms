@@ -77,7 +77,7 @@ export default async function CourseDetailPage({
           ) : isEnrolled ? (
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-green-700 dark:text-green-400 flex items-center gap-2">
+                <p className="font-medium text-success flex items-center gap-2">
                   <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                     <circle cx="10" cy="10" r="10" fill="currentColor" opacity="0.2"/>
                     <path d="M6 10l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>

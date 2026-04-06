@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Plus, BookOpen, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -47,16 +48,8 @@ export default function AdminCoursesPage() {
   useEffect(() => {
     fetch("/api/courses")
       .then((r) => r.json())
-      .then(async (data) => {
-        // Fetch full course data with sessions for each
-        const full = await Promise.all(
-          data.map((c: Course) =>
-            fetch(`/api/courses/${c.id}`)
-              .then((r) => r.json())
-              .catch(() => c)
-          )
-        );
-        setCourses(full);
+      .then((data) => {
+        setCourses(data);
         setLoading(false);
       });
   }, []);
@@ -144,17 +137,15 @@ export default function AdminCoursesPage() {
           </p>
         </div>
         <Button onClick={() => setCreateOpen(true)} size="lg">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" className="mr-2"><path d="M8 3v10M3 8h10"/></svg>
+          <Plus className="w-4 h-4 mr-2" />
           Tạo khóa học
         </Button>
       </div>
 
       {courses.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24">
-          <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-6">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-primary">
-              <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-            </svg>
+        <div className="flex flex-col items-center justify-center py-24 animate-fade-in-up">
+          <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
+            <BookOpen className="w-9 h-9 text-primary" strokeWidth={1.5} />
           </div>
           <h2 className="text-xl font-semibold mb-2">Bắt đầu xây dựng khóa học</h2>
           <p className="text-muted-foreground text-center max-w-md mb-6">
@@ -189,7 +180,7 @@ export default function AdminCoursesPage() {
                       <div onClick={(e) => e.preventDefault()}>
                         <DropdownMenu>
                           <DropdownMenuTrigger className="w-7 h-7 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/30 transition opacity-0 group-hover:opacity-100">
-                            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><circle cx="7" cy="3" r="1.2"/><circle cx="7" cy="7" r="1.2"/><circle cx="7" cy="11" r="1.2"/></svg>
+                            <MoreVertical className="w-4 h-4" />
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => router.push(`/admin/khoa-hoc/${course.id}/sua`)}>
@@ -258,9 +249,7 @@ export default function AdminCoursesPage() {
           >
             <div className="h-full flex flex-col items-center justify-center py-16 px-6 text-center">
               <div className="w-14 h-14 rounded-2xl bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center mb-4 transition">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-primary">
-                  <path d="M12 5v14M5 12h14"/>
-                </svg>
+                <Plus className="w-6 h-6 text-primary" />
               </div>
               <p className="font-medium text-muted-foreground group-hover:text-foreground transition">Tạo khóa học mới</p>
               <p className="text-xs text-muted-foreground mt-1">Bắt đầu trong vài giây</p>

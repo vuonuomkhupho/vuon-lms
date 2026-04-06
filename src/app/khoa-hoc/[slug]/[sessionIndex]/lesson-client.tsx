@@ -250,7 +250,7 @@ export function LessonClient({
               <div className="flex-1" />
 
               {completed ? (
-                <span className="flex items-center gap-2 text-sm font-semibold text-green-600 dark:text-green-400">
+                <span className="flex items-center gap-2 text-sm font-semibold text-success">
                   <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                     <circle cx="9" cy="9" r="9" fill="currentColor" opacity="0.2"/>
                     <path d="M5.5 9l2.5 2.5 4.5-4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>

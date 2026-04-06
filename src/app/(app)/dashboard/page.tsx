@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
+import { BookOpen } from "lucide-react";
 import { db } from "@/lib/db";
 import { enrollments, progress } from "@/lib/schema";
 import { eq } from "drizzle-orm";
@@ -8,6 +9,7 @@ import { getSession } from "@/lib/auth-server";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress as ProgressBar } from "@/components/ui/progress";
+import { EmptyState } from "@/components/empty-state";
 
 export default async function DashboardPage() {
   const session = (await getSession())!;
@@ -86,18 +88,13 @@ export default async function DashboardPage() {
 
       {courses.length === 0 ? (
         <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-16 gap-3">
-            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted-foreground">
-                <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/>
-                <path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/>
-              </svg>
-            </div>
-            <p className="text-muted-foreground font-medium">Chưa có khóa học nào</p>
-            <p className="text-sm text-muted-foreground">Khám phá và ghi danh khóa học đầu tiên</p>
-            <Link href="/khoa-hoc">
-              <Button className="mt-2">Xem khóa học</Button>
-            </Link>
+          <CardContent>
+            <EmptyState
+              icon={BookOpen}
+              title="Chưa có khóa học nào"
+              description="Khám phá và ghi danh khóa học đầu tiên"
+              action={<Link href="/khoa-hoc"><Button>Xem khóa học</Button></Link>}
+            />
           </CardContent>
         </Card>
       ) : (
