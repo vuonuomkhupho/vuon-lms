@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { enrollments, user } from "@/lib/schema";
+import { enrollments } from "@/lib/schema";
 import { requireAdmin } from "@/lib/auth-server";
+import { enrollStudentSchema } from "@/lib/validations";
 import { eq, and } from "drizzle-orm";
 
 // GET /api/enrollments?courseId=X — list enrollments for a course
@@ -25,13 +26,19 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/enrollments — enroll a student in a course
+// POST /api/enrollments — admin enroll a student in a course
 export async function POST(req: NextRequest) {
   try {
     await requireAdmin();
-    const { userId, courseId } = await req.json();
+    const body = await req.json();
+    const parsed = enrollStudentSchema.safeParse(body);
 
-    // Check if already enrolled
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+    }
+
+    const { userId, courseId } = parsed.data;
+
     const existing = await db.query.enrollments.findFirst({
       where: and(
         eq(enrollments.userId, userId),

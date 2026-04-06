@@ -35,60 +35,72 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Đăng ký</CardTitle>
-          <CardDescription>
-            Tạo tài khoản để bắt đầu học
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Họ và tên</Label>
-              <Input
-                id="name"
-                name="name"
-                placeholder="Nguyễn Văn A"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="email@example.com"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Mật khẩu</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                minLength={8}
-                required
-              />
-            </div>
-            {error && (
-              <p className="text-sm text-red-500">{error}</p>
-            )}
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Đang tạo tài khoản..." : "Đăng ký"}
-            </Button>
-          </form>
-          <p className="mt-4 text-center text-sm text-muted-foreground">
-            Đã có tài khoản?{" "}
-            <Link href="/dang-nhap" className="underline">
-              Đăng nhập
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
+    <div className="min-h-screen flex flex-col bg-background">
+      <header className="border-b">
+        <div className="container mx-auto flex items-center h-16 px-4">
+          <Link href="/" className="text-xl font-bold">Vuon LMS</Link>
+        </div>
+      </header>
+
+      <div className="flex-1 flex items-center justify-center px-4 py-12">
+        <Card className="w-full max-w-sm">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl">Đăng ký</CardTitle>
+            <CardDescription>
+              Tạo tài khoản để bắt đầu học
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Họ và tên</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  placeholder="Nguyễn Văn A"
+                  required
+                  autoComplete="name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="email@example.com"
+                  required
+                  autoComplete="email"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Mật khẩu</Label>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  minLength={8}
+                  required
+                  autoComplete="new-password"
+                />
+                <p className="text-xs text-muted-foreground">Tối thiểu 8 ký tự</p>
+              </div>
+              {error && (
+                <p className="text-sm text-destructive">{error}</p>
+              )}
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Đang tạo tài khoản..." : "Đăng ký"}
+              </Button>
+            </form>
+            <p className="mt-4 text-center text-sm text-muted-foreground">
+              Đã có tài khoản?{" "}
+              <Link href="/dang-nhap" className="text-primary hover:underline">
+                Đăng nhập
+              </Link>
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

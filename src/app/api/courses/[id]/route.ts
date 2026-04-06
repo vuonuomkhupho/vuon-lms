@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { courses, courseSessions, sessionMaterials } from "@/lib/schema";
+import { courses } from "@/lib/schema";
 import { requireAdmin } from "@/lib/auth-server";
+import { updateCourseSchema } from "@/lib/validations";
 import { eq } from "drizzle-orm";
 
+type Params = { params: Promise<{ id: string }> };
+
 // GET /api/courses/:id — get course with sessions and materials
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(_req: NextRequest, { params }: Params) {
   try {
     await requireAdmin();
     const { id } = await params;
@@ -18,9 +18,7 @@ export async function GET(
       with: {
         sessions: {
           orderBy: (s, { asc }) => [asc(s.orderIndex)],
-          with: {
-            materials: true,
-          },
+          with: { materials: true },
         },
       },
     });
@@ -35,22 +33,21 @@ export async function GET(
   }
 }
 
-// PATCH /api/courses/:id — update course
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+// PATCH /api/courses/:id — update course (whitelisted fields only)
+export async function PATCH(req: NextRequest, { params }: Params) {
   try {
     await requireAdmin();
     const { id } = await params;
     const body = await req.json();
+    const parsed = updateCourseSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+    }
 
     const [updated] = await db
       .update(courses)
-      .set({
-        ...body,
-        updatedAt: new Date(),
-      })
+      .set({ ...parsed.data, updatedAt: new Date() })
       .where(eq(courses.id, parseInt(id)))
       .returning();
 
@@ -61,10 +58,7 @@ export async function PATCH(
 }
 
 // DELETE /api/courses/:id — delete course
-export async function DELETE(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
     await requireAdmin();
     const { id } = await params;

@@ -14,23 +14,23 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen">
-      <header className="border-b bg-zinc-50">
+    <div className="min-h-screen bg-background">
+      <header className="border-b bg-muted/30">
         <div className="container mx-auto flex items-center justify-between h-14 px-4">
           <div className="flex items-center gap-6">
             <Link href="/admin" className="font-bold">
               Vuon Admin
             </Link>
             <nav className="flex items-center gap-4 text-sm">
-              <Link href="/admin/khoa-hoc" className="hover:underline">
+              <Link href="/admin/khoa-hoc" className="text-muted-foreground hover:text-foreground transition">
                 Khóa học
               </Link>
-              <Link href="/admin/hoc-vien" className="hover:underline">
+              <Link href="/admin/hoc-vien" className="text-muted-foreground hover:text-foreground transition">
                 Học viên
               </Link>
             </nav>
           </div>
-          <Link href="/dashboard" className="text-sm text-muted-foreground hover:underline">
+          <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground transition">
             Về trang chủ
           </Link>
         </div>

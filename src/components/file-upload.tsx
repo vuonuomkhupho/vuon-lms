@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { Progress } from "@/components/ui/progress";
+import { toast } from "sonner";
 
 interface FileUploadProps {
   courseId: string | number;
@@ -63,7 +64,7 @@ export function FileUpload({ courseId, sessionId, accept, onUploadComplete }: Fi
 
       onUploadComplete(key, file);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Upload thất bại");
+      toast.error(err instanceof Error ? err.message : "Upload thất bại");
     } finally {
       setUploading(false);
       setProgress(0);

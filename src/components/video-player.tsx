@@ -19,7 +19,7 @@ export function VideoPlayer({ src }: VideoPlayerProps) {
 
   return (
     <div
-      className="relative bg-[#1F1F1F] rounded-lg overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
+      className="relative bg-black rounded-lg overflow-hidden shadow-lg"
       onContextMenu={(e) => e.preventDefault()}
     >
       <video

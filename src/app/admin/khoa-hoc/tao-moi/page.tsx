@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { toast } from "sonner";
 
 export default function CreateCoursePage() {
   const router = useRouter();
@@ -29,10 +30,11 @@ export default function CreateCoursePage() {
 
     if (res.ok) {
       const course = await res.json();
+      toast.success("Đã tạo khóa học");
       router.push(`/admin/khoa-hoc/${course.id}/sua`);
     } else {
+      toast.error("Không thể tạo khóa học");
       setLoading(false);
-      alert("Không thể tạo khóa học");
     }
   }
 

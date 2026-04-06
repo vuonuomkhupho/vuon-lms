@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { sessionMaterials } from "@/lib/schema";
 import { requireAdmin } from "@/lib/auth-server";
+import { createMaterialSchema } from "@/lib/validations";
 import { eq } from "drizzle-orm";
 
 type Params = { params: Promise<{ id: string; sessionId: string }> };
@@ -12,18 +13,25 @@ export async function POST(req: NextRequest, { params }: Params) {
     await requireAdmin();
     const { sessionId } = await params;
     const body = await req.json();
+    const parsed = createMaterialSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+    }
+
+    const { type, title, r2Key, hlsEncryptionKey, externalUrl, contentText, metadata } = parsed.data;
 
     const [material] = await db
       .insert(sessionMaterials)
       .values({
         sessionId: parseInt(sessionId),
-        type: body.type,
-        title: body.title,
-        r2Key: body.r2Key || null,
-        hlsEncryptionKey: body.hlsEncryptionKey || null,
-        externalUrl: body.externalUrl || null,
-        contentText: body.contentText || null,
-        metadata: body.metadata || null,
+        type,
+        title,
+        r2Key: r2Key || null,
+        hlsEncryptionKey: hlsEncryptionKey || null,
+        externalUrl: externalUrl || null,
+        contentText: contentText || null,
+        metadata: metadata || null,
       })
       .returning();
 

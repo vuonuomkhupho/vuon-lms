@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { courses } from "@/lib/schema";
 import { requireAdmin } from "@/lib/auth-server";
-import { eq } from "drizzle-orm";
+import { createCourseSchema } from "@/lib/validations";
 
 // GET /api/courses — list all courses (admin)
 export async function GET() {
@@ -20,8 +20,15 @@ export async function POST(req: NextRequest) {
   try {
     const session = await requireAdmin();
     const body = await req.json();
+    const parsed = createCourseSchema.safeParse(body);
 
-    const slug = body.title
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+    }
+
+    const { title, description } = parsed.data;
+
+    const slug = title
       .toLowerCase()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
@@ -33,9 +40,9 @@ export async function POST(req: NextRequest) {
     const [course] = await db
       .insert(courses)
       .values({
-        title: body.title,
+        title,
         slug: slug + "-" + Date.now().toString(36),
-        description: body.description || null,
+        description: description || null,
         instructorId: session.user.id,
         isPublished: false,
       })

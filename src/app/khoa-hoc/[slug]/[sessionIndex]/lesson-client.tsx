@@ -3,7 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import DOMPurify from "isomorphic-dompurify";
 import { VideoPlayer } from "@/components/video-player";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 
 interface Material {
@@ -70,52 +73,51 @@ export function LessonClient({
   }
 
   return (
-    <div className="h-screen flex flex-col" style={{ fontFamily: "'Source Sans 3', 'Inter', system-ui, sans-serif" }}>
-      {/* ═══ HEADER ═══ */}
-      <header className="h-[56px] border-b border-[#E0E0E0] flex items-center px-5 shrink-0 bg-white">
+    <div className="h-screen flex flex-col bg-background text-foreground">
+      {/* Header */}
+      <header className="h-14 border-b flex items-center px-5 shrink-0 bg-background">
         <div className="flex items-center gap-3 flex-1">
-          <Link href="/" className="text-[#0056D2] font-bold text-[15px] tracking-tight">
+          <Link href="/" className="text-primary font-bold text-[15px] tracking-tight">
             Vuon LMS
           </Link>
-          <div className="w-px h-5 bg-[#E0E0E0]" />
-          <span className="text-[13px] text-[#636363]">{course.title}</span>
+          <div className="w-px h-5 bg-border" />
+          <span className="text-[13px] text-muted-foreground">{course.title}</span>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#F5F5F5] transition"
+            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted transition"
+            aria-label="Toggle sidebar"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#636363" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-muted-foreground"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
           </button>
-          <Link href="/dashboard" className="w-8 h-8 rounded-full bg-[#0056D2] flex items-center justify-center text-white text-xs font-bold">
+          <Link href="/dashboard" className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold">
             V
           </Link>
         </div>
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* ═══ SIDEBAR (Coursera-style) ═══ */}
+        {/* Sidebar */}
         {sidebarOpen && (
-          <aside className="w-[260px] border-r border-[#E0E0E0] bg-white flex flex-col shrink-0">
-            {/* Course title + close */}
+          <aside className="w-[260px] border-r bg-background flex flex-col shrink-0 max-md:hidden">
             <div className="p-4 pb-3 flex items-start justify-between">
-              <h2 className="text-[14px] font-bold text-[#1F1F1F] leading-snug pr-2">
+              <h2 className="text-sm font-bold leading-snug pr-2">
                 {course.title}
               </h2>
               <button
                 onClick={() => setSidebarOpen(false)}
-                className="w-6 h-6 flex items-center justify-center rounded hover:bg-[#F5F5F5] shrink-0 mt-0.5"
+                className="w-6 h-6 flex items-center justify-center rounded hover:bg-muted shrink-0 mt-0.5"
+                aria-label="Close sidebar"
               >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="#636363"><path d="M11.083 3.624L7.707 7l3.376 3.376-.707.707L7 7.707l-3.376 3.376-.707-.707L6.293 7 2.917 3.624l.707-.707L7 6.293l3.376-3.376z"/></svg>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" className="text-muted-foreground"><path d="M11.083 3.624L7.707 7l3.376 3.376-.707.707L7 7.707l-3.376 3.376-.707-.707L6.293 7 2.917 3.624l.707-.707L7 6.293l3.376-3.376z"/></svg>
               </button>
             </div>
 
-            {/* Lesson list */}
             <div className="flex-1 overflow-y-auto">
               {sessions.map((session, i) => {
                 const isCurrent = i === currentIndex;
                 const isDone = completedSet.has(session.id) || (i === currentIndex && completed);
-                const hasVideo = session.materials.some(m => m.type === "video");
 
                 return (
                   <Link
@@ -124,38 +126,29 @@ export function LessonClient({
                     className={`
                       flex items-start gap-3 px-4 py-3 border-l-[3px] transition-colors
                       ${isCurrent
-                        ? "border-l-[#0056D2] bg-[#E8F1FF]"
-                        : "border-l-transparent hover:bg-[#F5F5F5]"
+                        ? "border-l-primary bg-primary/10"
+                        : "border-l-transparent hover:bg-muted"
                       }
                     `}
                   >
-                    {/* Status icon */}
                     <div className="mt-0.5 shrink-0">
                       {isDone ? (
                         <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                          <circle cx="10" cy="10" r="10" fill="#00A854"/>
+                          <circle cx="10" cy="10" r="10" className="fill-green-500"/>
                           <path d="M6 10l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                       ) : (
                         <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                          <circle cx="10" cy="10" r="9" stroke="#BDBDBD" strokeWidth="1.5"/>
-                          {hasVideo && <path d="M8 7v6l5-3z" fill="#BDBDBD"/>}
-                          {!hasVideo && <circle cx="10" cy="10" r="2" fill="#BDBDBD"/>}
+                          <circle cx="10" cy="10" r="9" className="stroke-muted-foreground/40" strokeWidth="1.5"/>
                         </svg>
                       )}
                     </div>
-                    {/* Lesson info */}
                     <div className="min-w-0">
-                      <div className={`text-[13px] leading-snug ${isCurrent ? "font-semibold text-[#1F1F1F]" : isDone ? "text-[#636363]" : "text-[#1F1F1F]"}`}>
+                      <div className={`text-[13px] leading-snug ${isCurrent ? "font-semibold" : isDone ? "text-muted-foreground" : ""}`}>
                         {session.title}
                       </div>
-                      <div className="text-[11px] text-[#8C8C8C] mt-0.5">
-                        Buổi {i + 1} • {session.materials.length > 0
-                          ? session.materials.map(m =>
-                              m.type === "video" ? "Video" : m.type === "pdf" ? "PDF" : m.type === "recap" ? "Recap" : "Link"
-                            ).join(", ")
-                          : "Chưa có tài liệu"
-                        }
+                      <div className="text-[11px] text-muted-foreground mt-0.5">
+                        Buổi {i + 1}
                       </div>
                     </div>
                   </Link>
@@ -163,69 +156,62 @@ export function LessonClient({
               })}
             </div>
 
-            {/* Progress footer */}
-            <div className="p-4 border-t border-[#E0E0E0]">
-              <div className="flex justify-between text-[11px] text-[#636363] mb-1.5">
+            <div className="p-4 border-t">
+              <div className="flex justify-between text-[11px] text-muted-foreground mb-1.5">
                 <span>Tiến độ</span>
                 <span>{doneCount}/{totalSessions} buổi</span>
               </div>
-              <div className="w-full h-[6px] bg-[#E0E0E0] rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-[#0056D2] rounded-full transition-all duration-500"
-                  style={{ width: `${Math.round((doneCount / totalSessions) * 100)}%` }}
-                />
-              </div>
+              <Progress value={Math.round((doneCount / totalSessions) * 100)} className="h-1.5" />
             </div>
           </aside>
         )}
 
-        {/* ═══ MAIN CONTENT ═══ */}
-        <main className="flex-1 overflow-y-auto bg-white">
-          <div className="max-w-[800px] mx-auto px-8 py-8">
-            {/* Large title (Coursera-style) */}
-            <h1 className="text-[36px] font-bold text-[#1F1F1F] leading-[1.2] mb-6">
+        {/* Main content */}
+        <main className="flex-1 overflow-y-auto">
+          <div className="max-w-[800px] mx-auto px-6 md:px-8 py-8">
+            <h1 className="text-2xl md:text-4xl font-bold leading-tight mb-6">
               {currentSession.title}
             </h1>
 
-            {/* Video player */}
+            {/* Video */}
             {videoUrl ? (
               <div className="mb-8 rounded-lg overflow-hidden">
                 <VideoPlayer src={videoUrl} />
               </div>
             ) : (
-              <div className="mb-8 aspect-video bg-[#F5F5F5] rounded-lg flex items-center justify-center border border-[#E0E0E0]">
+              <div className="mb-8 aspect-video bg-muted rounded-lg flex items-center justify-center border">
                 <div className="text-center">
                   <svg width="48" height="48" viewBox="0 0 48 48" fill="none" className="mx-auto mb-2">
-                    <rect width="48" height="48" rx="24" fill="#E0E0E0"/>
-                    <path d="M20 16v16l12-8z" fill="#8C8C8C"/>
+                    <rect width="48" height="48" rx="24" className="fill-muted-foreground/10"/>
+                    <path d="M20 16v16l12-8z" className="fill-muted-foreground/40"/>
                   </svg>
-                  <p className="text-[14px] text-[#8C8C8C]">Video chưa được upload</p>
+                  <p className="text-sm text-muted-foreground">Video chưa được upload</p>
                 </div>
               </div>
             )}
 
-            {/* Recap / Description content */}
+            {/* Recap */}
             {recaps.length > 0 && recaps[0].contentText && (
-              <div className="mb-8">
-                <div className="text-[16px] text-[#1F1F1F] leading-[1.7]"
-                  dangerouslySetInnerHTML={{ __html: recaps[0].contentText }}
+              <div className="mb-8 prose prose-neutral dark:prose-invert max-w-none">
+                <div
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(recaps[0].contentText) }}
                 />
               </div>
             )}
 
-            {/* Materials — Coursera "Resources" style */}
+            {/* Resources */}
             {(pdfs.length > 0 || links.length > 0) && (
               <div className="mb-8">
-                <h3 className="text-[14px] font-bold text-[#1F1F1F] mb-3">Tài liệu buổi học</h3>
+                <h3 className="text-sm font-bold mb-3">Tài liệu buổi học</h3>
                 <div className="space-y-2">
                   {pdfs.map((pdf) => (
-                    <div key={pdf.id} className="flex items-center gap-3 p-3 rounded-lg border border-[#E0E0E0] hover:bg-[#F5F5F5] transition">
-                      <div className="w-9 h-9 rounded bg-[#FEE2E2] flex items-center justify-center shrink-0">
-                        <svg width="18" height="18" viewBox="0 0 18 18" fill="#E30B5C"><path d="M4 1h7l4 4v10a2 2 0 01-2 2H4a2 2 0 01-2-2V3a2 2 0 012-2z"/><path d="M11 1v4h4" fill="none" stroke="#E30B5C" strokeWidth="1"/></svg>
+                    <div key={pdf.id} className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition">
+                      <div className="w-9 h-9 rounded bg-destructive/10 flex items-center justify-center shrink-0">
+                        <svg width="18" height="18" viewBox="0 0 18 18" className="fill-destructive"><path d="M4 1h7l4 4v10a2 2 0 01-2 2H4a2 2 0 01-2-2V3a2 2 0 012-2z"/></svg>
                       </div>
                       <div className="flex-1">
-                        <div className="text-[13px] font-medium text-[#1F1F1F]">{pdf.title}</div>
-                        <div className="text-[11px] text-[#8C8C8C]">PDF</div>
+                        <div className="text-[13px] font-medium">{pdf.title}</div>
+                        <div className="text-[11px] text-muted-foreground">PDF</div>
                       </div>
                     </div>
                   ))}
@@ -235,14 +221,14 @@ export function LessonClient({
                       href={link.externalUrl || "#"}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-3 p-3 rounded-lg border border-[#E0E0E0] hover:bg-[#F5F5F5] transition group"
+                      className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition group"
                     >
-                      <div className="w-9 h-9 rounded bg-[#E8F1FF] flex items-center justify-center shrink-0">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="#0056D2"><path d="M8.636 3.5a.5.5 0 00-.5-.5H1.5A1.5 1.5 0 000 4.5v10A1.5 1.5 0 001.5 16h10a1.5 1.5 0 001.5-1.5V7.864a.5.5 0 00-1 0V14.5a.5.5 0 01-.5.5h-10a.5.5 0 01-.5-.5v-10a.5.5 0 01.5-.5h6.636a.5.5 0 00.5-.5z"/><path d="M16 .5a.5.5 0 00-.5-.5h-5a.5.5 0 000 1h3.793L6.146 9.146a.5.5 0 10.708.708L15 1.707V5.5a.5.5 0 001 0v-5z"/></svg>
+                      <div className="w-9 h-9 rounded bg-primary/10 flex items-center justify-center shrink-0">
+                        <svg width="16" height="16" viewBox="0 0 16 16" className="fill-primary"><path d="M8.636 3.5a.5.5 0 00-.5-.5H1.5A1.5 1.5 0 000 4.5v10A1.5 1.5 0 001.5 16h10a1.5 1.5 0 001.5-1.5V7.864a.5.5 0 00-1 0V14.5a.5.5 0 01-.5.5h-10a.5.5 0 01-.5-.5v-10a.5.5 0 01.5-.5h6.636a.5.5 0 00.5-.5z"/><path d="M16 .5a.5.5 0 00-.5-.5h-5a.5.5 0 000 1h3.793L6.146 9.146a.5.5 0 10.708.708L15 1.707V5.5a.5.5 0 001 0v-5z"/></svg>
                       </div>
-                      <div className="flex-1">
-                        <div className="text-[13px] font-medium text-[#0056D2] group-hover:underline">{link.title}</div>
-                        <div className="text-[11px] text-[#8C8C8C] truncate">{link.externalUrl}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[13px] font-medium text-primary group-hover:underline">{link.title}</div>
+                        <div className="text-[11px] text-muted-foreground truncate">{link.externalUrl}</div>
                       </div>
                     </a>
                   ))}
@@ -250,61 +236,43 @@ export function LessonClient({
               </div>
             )}
 
-            {/* ═══ ACTION ROW (Coursera-style) ═══ */}
-            <div className="flex items-center gap-3 py-4 border-t border-[#E0E0E0]">
+            {/* Actions */}
+            <div className="flex items-center gap-3 py-4 border-t">
               {currentIndex > 0 && (
-                <Link
-                  href={`/khoa-hoc/${slug}/${currentIndex}`}
-                  className="px-5 py-2.5 text-[14px] font-semibold text-[#0056D2] border border-[#0056D2] rounded-[4px] hover:bg-[#E8F1FF] transition"
-                >
-                  ← Buổi trước
+                <Link href={`/khoa-hoc/${slug}/${currentIndex}`}>
+                  <Button variant="outline">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" className="mr-1.5"><path d="M8.354 2.354a.5.5 0 10-.708-.708l-4.5 4.5a.5.5 0 000 .708l4.5 4.5a.5.5 0 00.708-.708L4.207 7l4.147-4.646z"/></svg>
+                    Buổi trước
+                  </Button>
                 </Link>
               )}
 
               <div className="flex-1" />
 
               {completed ? (
-                <span className="flex items-center gap-2 text-[14px] font-semibold text-[#00A854]">
+                <span className="flex items-center gap-2 text-sm font-semibold text-green-600 dark:text-green-400">
                   <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                    <circle cx="9" cy="9" r="9" fill="#00A854"/>
-                    <path d="M5.5 9l2.5 2.5 4.5-4.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <circle cx="9" cy="9" r="9" fill="currentColor" opacity="0.2"/>
+                    <path d="M5.5 9l2.5 2.5 4.5-4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                   Đã hoàn thành
                 </span>
               ) : (
-                <button
-                  onClick={markComplete}
-                  className="px-5 py-2.5 text-[14px] font-semibold text-[#636363] border border-[#E0E0E0] rounded-[4px] hover:bg-[#F5F5F5] transition"
-                >
-                  ✓ Hoàn thành
-                </button>
+                <Button variant="outline" onClick={markComplete}>
+                  Hoàn thành
+                </Button>
               )}
 
               {currentIndex < totalSessions - 1 && (
-                <button
-                  onClick={goNext}
-                  className="px-5 py-2.5 text-[14px] font-semibold text-white bg-[#0056D2] rounded-[4px] hover:bg-[#003D9D] transition"
-                >
-                  Buổi tiếp theo →
-                </button>
+                <Button onClick={goNext}>
+                  Buổi tiếp theo
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" className="ml-1.5"><path d="M5.646 11.646a.5.5 0 00.708.708l4.5-4.5a.5.5 0 000-.708l-4.5-4.5a.5.5 0 10-.708.708L9.793 7 5.646 11.646z"/></svg>
+                </Button>
               )}
             </div>
           </div>
         </main>
       </div>
-
-      {/* ═══ FLOATING NEXT BUTTON (Coursera-style, bottom right) ═══ */}
-      {currentIndex < totalSessions - 1 && (
-        <div className="fixed bottom-6 right-6">
-          <button
-            onClick={goNext}
-            className="px-4 py-2.5 text-[13px] font-semibold text-[#0056D2] bg-white border border-[#0056D2] rounded-[4px] shadow-lg hover:bg-[#E8F1FF] transition flex items-center gap-1.5"
-          >
-            Buổi tiếp theo
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="#0056D2"><path d="M5.646 11.646a.5.5 0 00.708.708l4.5-4.5a.5.5 0 000-.708l-4.5-4.5a.5.5 0 10-.708.708L9.793 7 5.646 11.646z"/></svg>
-          </button>
-        </div>
-      )}
     </div>
   );
 }
