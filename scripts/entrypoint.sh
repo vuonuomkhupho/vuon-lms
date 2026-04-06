@@ -116,7 +116,7 @@ except:
       --install-app erpnext \
       --install-app lms \
       --install-app dfp_external_storage \
-      --verbose"
+      --verbose" || echo "WARNING: bench new-site had errors, attempting migrate..."
   else
     su frappe -c "cd /home/frappe/frappe-bench && bench new-site '${SITE_NAME}' \
       --mariadb-root-password '${DB_PASSWORD}' \
@@ -124,14 +124,17 @@ except:
       --install-app erpnext \
       --install-app lms \
       --install-app dfp_external_storage \
-      --no-mariadb-socket"
+      --no-mariadb-socket" || echo "WARNING: bench new-site had errors, attempting migrate..."
   fi
+
+  # Run migrate to ensure all doctypes/modules are set up
+  su frappe -c "cd /home/frappe/frappe-bench && bench --site '${SITE_NAME}' migrate" || true
 
   su frappe -c "cd /home/frappe/frappe-bench && \
     bench --site '${SITE_NAME}' set-config host_name '${HOST_NAME:-http://localhost:8000}' && \
     bench --site '${SITE_NAME}' set-config developer_mode 1"
 
-  echo "=== Site ${SITE_NAME} created successfully ==="
+  echo "=== Site ${SITE_NAME} setup complete ==="
 fi
 
 # Set default site
