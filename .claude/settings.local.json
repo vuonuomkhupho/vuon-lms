@@ -42,7 +42,8 @@
       "WebFetch(domain:about.coursera.org)",
       "WebFetch(domain:mobbin.com)",
       "WebFetch(domain:www.coursera.org)",
-      "WebFetch(domain:medium.com)"
+      "WebFetch(domain:medium.com)",
+      "Bash(npx next:*)"
     ]
   }
 }

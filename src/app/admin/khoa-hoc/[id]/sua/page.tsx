@@ -1,16 +1,23 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { FileUpload } from "@/components/file-upload";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { toast } from "sonner";
+
+// ─── Types ───
 
 interface Material {
   id: number;
@@ -39,96 +46,145 @@ interface Course {
   sessions: Session[];
 }
 
-const MATERIAL_CONFIG: Record<string, { icon: string; label: string; color: string }> = {
-  video: { icon: "🎬", label: "Video", color: "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800" },
-  pdf: { icon: "📄", label: "PDF / Slide", color: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800" },
-  recap: { icon: "📝", label: "Recap", color: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800" },
-  link: { icon: "🔗", label: "Link", color: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800" },
-};
+// ─── Material type cards ───
 
-function MaterialEditor({
+const MATERIAL_TYPES = [
+  {
+    type: "video" as const,
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+      </svg>
+    ),
+    label: "Video",
+    description: "Upload video bài giảng",
+    colors: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800",
+  },
+  {
+    type: "pdf" as const,
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+      </svg>
+    ),
+    label: "Tài liệu",
+    description: "PDF, slide, hình ảnh",
+    colors: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800",
+  },
+  {
+    type: "recap" as const,
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+      </svg>
+    ),
+    label: "Recap",
+    description: "Tóm tắt nội dung",
+    colors: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800",
+  },
+  {
+    type: "link" as const,
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
+      </svg>
+    ),
+    label: "Link",
+    description: "Google Docs, bài viết",
+    colors: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800",
+  },
+];
+
+function getMaterialConfig(type: string) {
+  return MATERIAL_TYPES.find((m) => m.type === type) || MATERIAL_TYPES[0];
+}
+
+// ─── MaterialCard ───
+
+function MaterialCard({
   material,
+  onSave,
+  onDelete,
   courseId,
   sessionId,
-  onDelete,
-  onUpdate,
 }: {
   material: Material;
+  onSave: (data: Record<string, unknown>) => Promise<void>;
+  onDelete: () => void;
   courseId: string;
   sessionId: number;
-  onDelete: () => void;
-  onUpdate: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const config = MATERIAL_CONFIG[material.type];
+  const config = getMaterialConfig(material.type);
 
-  async function saveMaterial(data: Record<string, unknown>) {
+  async function save(data: Record<string, unknown>) {
     setSaving(true);
-    await fetch(`/api/materials/${material.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
+    await onSave(data);
     setSaving(false);
-    toast.success("Đã lưu");
-    onUpdate();
   }
+
+  const statusText = {
+    recap: material.contentText ? "Đã viết" : "Chưa có nội dung",
+    link: material.externalUrl ? new URL(material.externalUrl).hostname : "Chưa có URL",
+    pdf: material.r2Key ? "Đã upload" : "Chưa upload",
+    video: material.r2Key ? "Đã upload" : "Chưa upload",
+  }[material.type] || "";
 
   return (
     <>
-      <div className={`rounded-xl border overflow-hidden transition-all ${expanded ? "shadow-sm" : ""} ${config.color}`}>
+      <div className={`rounded-lg border transition-all ${expanded ? "shadow-sm ring-1 ring-border" : "hover:shadow-sm"}`}>
         <div
           className="flex items-center gap-3 px-4 py-3 cursor-pointer"
           onClick={() => setExpanded(!expanded)}
         >
-          <span className="text-lg">{config.icon}</span>
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${config.colors}`}>
+            {config.icon}
+          </div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium">{material.title}</div>
-            <div className="text-xs opacity-60">
-              {material.type === "recap" && (material.contentText ? "Bấm để sửa nội dung" : "Chưa có nội dung — bấm để thêm")}
-              {material.type === "link" && (material.externalUrl || "Chưa có URL")}
-              {material.type === "pdf" && (material.r2Key ? "Đã upload" : "Chưa upload")}
-            </div>
+            <div className="text-sm font-medium truncate">{material.title}</div>
+            <div className="text-xs text-muted-foreground">{statusText}</div>
           </div>
-          <div className="flex items-center gap-2">
-            {saving && <span className="text-xs opacity-60">Đang lưu...</span>}
-            <span className="text-xs opacity-50">{expanded ? "▲" : "▼"}</span>
-          </div>
+          {saving && (
+            <span className="text-xs text-muted-foreground animate-pulse">Lưu...</span>
+          )}
+          <svg
+            width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"
+            className={`text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`}
+          >
+            <path d="M4 6l4 4 4-4"/>
+          </svg>
         </div>
 
         {expanded && (
-          <div className="px-4 pb-4 border-t border-current/10 bg-background/50">
+          <div className="px-4 pb-4 border-t">
             {material.type === "recap" && (
               <div className="mt-3">
-                <label className="text-xs font-medium text-muted-foreground block mb-1">Nội dung recap</label>
-                <textarea
-                  className="w-full min-h-[200px] p-3 text-sm border rounded-lg resize-y outline-none focus:border-primary focus:ring-1 focus:ring-primary transition bg-background"
+                <Textarea
+                  className="min-h-[160px] resize-y"
                   defaultValue={material.contentText || ""}
-                  placeholder="Viết tóm tắt nội dung buổi học ở đây..."
-                  onBlur={(e) => saveMaterial({ contentText: e.target.value })}
+                  placeholder="Viết tóm tắt nội dung buổi học..."
+                  onBlur={(e) => save({ contentText: e.target.value })}
                 />
               </div>
             )}
 
             {material.type === "link" && (
               <div className="mt-3 space-y-3">
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground block mb-1">Tên tài liệu</label>
-                  <input
-                    className="w-full px-3 py-2 text-sm border rounded-lg outline-none focus:border-primary transition bg-background"
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Tên hiển thị</Label>
+                  <Input
                     defaultValue={material.title}
-                    onBlur={(e) => saveMaterial({ title: e.target.value })}
+                    onBlur={(e) => save({ title: e.target.value })}
                   />
                 </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground block mb-1">URL</label>
-                  <input
-                    className="w-full px-3 py-2 text-sm border rounded-lg outline-none focus:border-primary transition bg-background"
+                <div className="space-y-1.5">
+                  <Label className="text-xs">URL</Label>
+                  <Input
                     defaultValue={material.externalUrl || ""}
-                    placeholder="https://docs.google.com/..."
-                    onBlur={(e) => saveMaterial({ externalUrl: e.target.value })}
+                    placeholder="https://..."
+                    onBlur={(e) => save({ externalUrl: e.target.value })}
                   />
                 </div>
               </div>
@@ -137,46 +193,46 @@ function MaterialEditor({
             {material.type === "pdf" && (
               <div className="mt-3">
                 {material.r2Key ? (
-                  <div className="text-sm text-muted-foreground">
-                    File đã upload. <button className="text-primary hover:underline" onClick={() => setConfirmDelete(true)}>Xóa và upload lại</button>
+                  <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-500 shrink-0"><path d="M20 6L9 17l-5-5"/></svg>
+                    <span className="text-sm text-muted-foreground flex-1">File đã upload</span>
+                    <button className="text-xs text-destructive hover:underline" onClick={() => setConfirmDelete(true)}>Xóa</button>
                   </div>
                 ) : (
-                  <FileUpload
-                    courseId={courseId}
-                    sessionId={sessionId}
-                    accept=".pdf,.ppt,.pptx"
-                    onUploadComplete={async (key) => {
-                      await saveMaterial({ r2Key: key });
-                    }}
-                  />
+                  <FileUpload courseId={courseId} sessionId={sessionId} accept=".pdf,.ppt,.pptx" onUploadComplete={async (key) => { await save({ r2Key: key }); }} />
                 )}
               </div>
             )}
 
-            <div className="mt-4 pt-3 border-t">
-              <button
-                className="text-xs text-destructive/70 hover:text-destructive transition"
-                onClick={() => setConfirmDelete(true)}
-              >
-                Xóa tài liệu này
+            {material.type === "video" && (
+              <div className="mt-3">
+                {material.r2Key ? (
+                  <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-500 shrink-0"><path d="M20 6L9 17l-5-5"/></svg>
+                    <span className="text-sm text-muted-foreground flex-1">{material.title}</span>
+                    <button className="text-xs text-destructive hover:underline" onClick={() => setConfirmDelete(true)}>Xóa</button>
+                  </div>
+                ) : (
+                  <FileUpload courseId={courseId} sessionId={sessionId} accept="video/*" onUploadComplete={async (key) => { await save({ r2Key: key }); }} />
+                )}
+              </div>
+            )}
+
+            <div className="mt-3 flex justify-end">
+              <button className="text-xs text-muted-foreground hover:text-destructive transition" onClick={() => setConfirmDelete(true)}>
+                Xóa tài liệu
               </button>
             </div>
           </div>
         )}
       </div>
 
-      <ConfirmDialog
-        open={confirmDelete}
-        onOpenChange={setConfirmDelete}
-        title="Xóa tài liệu?"
-        description={`Bạn có chắc muốn xóa "${material.title}"?`}
-        confirmLabel="Xóa"
-        destructive
-        onConfirm={onDelete}
-      />
+      <ConfirmDialog open={confirmDelete} onOpenChange={setConfirmDelete} title="Xóa tài liệu?" description={`Xóa "${material.title}"?`} confirmLabel="Xóa" destructive onConfirm={onDelete} />
     </>
   );
 }
+
+// ─── Main Editor ───
 
 export default function EditCoursePage() {
   const { id } = useParams();
@@ -185,15 +241,14 @@ export default function EditCoursePage() {
   const [loading, setLoading] = useState(true);
   const [selectedSession, setSelectedSession] = useState<number | null>(null);
   const [editingTitle, setEditingTitle] = useState<number | null>(null);
-  const [addingMaterial, setAddingMaterial] = useState(false);
   const [deleteSessionTarget, setDeleteSessionTarget] = useState<Session | null>(null);
-  const [linkDialog, setLinkDialog] = useState<{ sessionId: number } | null>(null);
+  const [linkDialog, setLinkDialog] = useState<number | null>(null);
   const [linkTitle, setLinkTitle] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
   const newSessionRef = useRef<HTMLInputElement>(null);
   const editTitleRef = useRef<HTMLInputElement>(null);
 
-  async function loadCourse() {
+  const loadCourse = useCallback(async () => {
     const res = await fetch(`/api/courses/${id}`);
     if (res.ok) {
       const data = await res.json();
@@ -203,7 +258,7 @@ export default function EditCoursePage() {
       }
     }
     setLoading(false);
-  }
+  }, [id, selectedSession]);
 
   useEffect(() => { loadCourse(); }, [id]);
 
@@ -225,13 +280,14 @@ export default function EditCoursePage() {
       body: JSON.stringify({ title }),
     });
     const session = await res.json();
-    toast.success("Đã thêm buổi học");
+    toast.success("Đã thêm buổi học!");
     if (newSessionRef.current) newSessionRef.current.value = "";
     await loadCourse();
     setSelectedSession(session.id);
   }
 
   async function renameSession(sessionId: number, title: string) {
+    if (!title.trim()) return;
     await fetch(`/api/courses/${id}/sessions/${sessionId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -244,29 +300,27 @@ export default function EditCoursePage() {
   async function deleteSession(session: Session) {
     await fetch(`/api/courses/${id}/sessions/${session.id}`, { method: "DELETE" });
     toast.success("Đã xóa buổi học");
-    if (selectedSession === session.id) setSelectedSession(null);
+    if (selectedSession === session.id) {
+      const remaining = course?.sessions.filter((s) => s.id !== session.id);
+      setSelectedSession(remaining?.[0]?.id || null);
+    }
     setDeleteSessionTarget(null);
     loadCourse();
   }
 
-  async function addMaterial(sessionId: number, type: Material["type"], extra?: Record<string, unknown>) {
-    const body: Record<string, unknown> = { type, ...extra };
-
-    if (type === "recap") {
-      body.title = "Recap";
-      body.contentText = "";
-    } else if (type === "video") {
-      body.title = "Video bài giảng";
-    } else {
-      body.title = "Slide bài giảng";
+  async function addMaterial(sessionId: number, type: Material["type"]) {
+    if (type === "link") {
+      setLinkDialog(sessionId);
+      return;
     }
 
+    const titles: Record<string, string> = { video: "Video bài giảng", pdf: "Slide bài giảng", recap: "Recap" };
     await fetch(`/api/courses/${id}/sessions/${sessionId}/materials`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ type, title: titles[type] || type, contentText: type === "recap" ? "" : undefined }),
     });
-    toast.success(`Đã thêm ${MATERIAL_CONFIG[type].label}`);
+    toast.success(`Đã thêm ${getMaterialConfig(type).label}`);
     loadCourse();
   }
 
@@ -277,18 +331,25 @@ export default function EditCoursePage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type: "link", title: linkTitle, externalUrl: linkUrl }),
     });
-    toast.success("Đã thêm Link");
+    toast.success("Đã thêm link");
     setLinkDialog(null);
     setLinkTitle("");
     setLinkUrl("");
     loadCourse();
   }
 
+  async function saveMaterial(materialId: number, data: Record<string, unknown>) {
+    await fetch(`/api/materials/${materialId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    toast.success("Đã lưu");
+    loadCourse();
+  }
+
   async function deleteMaterial(sessionId: number, materialId: number) {
-    await fetch(
-      `/api/courses/${id}/sessions/${sessionId}/materials?materialId=${materialId}`,
-      { method: "DELETE" }
-    );
+    await fetch(`/api/courses/${id}/sessions/${sessionId}/materials?materialId=${materialId}`, { method: "DELETE" });
     toast.success("Đã xóa");
     loadCourse();
   }
@@ -298,356 +359,363 @@ export default function EditCoursePage() {
     await fetch(`/api/courses/${id}/sessions/${sessionId}/materials`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        type,
-        title: file.name,
-        r2Key: key,
-        metadata: { size: file.size, contentType: file.type },
-      }),
+      body: JSON.stringify({ type, title: file.name, r2Key: key, metadata: { size: file.size, contentType: file.type } }),
     });
-    toast.success(`Upload ${file.name} thành công!`);
+    toast.success(`Đã upload ${file.name}`);
     loadCourse();
   }
 
+  // ─── Loading state ───
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[70vh]">
-        <div className="animate-pulse flex flex-col items-center gap-3">
-          <div className="h-6 w-48 bg-muted rounded" />
-          <div className="h-4 w-32 bg-muted rounded" />
+      <div className="h-[calc(100vh-3.5rem)] flex">
+        <div className="w-80 border-r p-4 space-y-3">
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+        <div className="flex-1 p-8">
+          <Skeleton className="h-8 w-64 mb-4" />
+          <Skeleton className="h-4 w-96 mb-8" />
+          <Skeleton className="h-48 w-full" />
         </div>
       </div>
     );
   }
 
-  if (!course) return <p className="text-muted-foreground">Không tìm thấy khóa học</p>;
-
-  const currentSession = course.sessions.find((s) => s.id === selectedSession);
-
-  return (
-    <div className="h-[calc(100vh-3.5rem)] flex flex-col -my-6 -mx-4">
-      {/* Top bar */}
-      <div className="flex items-center justify-between px-4 md:px-6 py-3 border-b bg-background shrink-0">
-        <div className="flex items-center gap-4 min-w-0">
-          <button
-            onClick={() => router.push("/admin/khoa-hoc")}
-            className="text-sm text-muted-foreground hover:text-foreground transition shrink-0"
-          >
-            ← Quay lại
-          </button>
-          <input
-            className="text-lg font-semibold bg-transparent border-0 outline-none focus:ring-0 min-w-0 w-full max-w-sm"
-            defaultValue={course.title}
-            onBlur={(e) => {
-              if (e.target.value !== course.title) updateCourse({ title: e.target.value });
-            }}
-          />
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Badge variant={course.isPublished ? "default" : "secondary"} className="text-xs">
-            {course.isPublished ? "Đã xuất bản" : "Nháp"}
-          </Badge>
-          <Button
-            size="sm"
-            variant={course.isPublished ? "outline" : "default"}
-            onClick={() => updateCourse({ isPublished: !course.isPublished })}
-          >
-            {course.isPublished ? "Chuyển nháp" : "Xuất bản"}
-          </Button>
+  if (!course) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <div className="text-center">
+          <p className="text-muted-foreground mb-4">Không tìm thấy khóa học</p>
+          <Button variant="outline" onClick={() => router.push("/admin/khoa-hoc")}>Quay lại</Button>
         </div>
       </div>
+    );
+  }
 
-      {/* Two-panel layout */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left panel — Curriculum */}
-        <div className="w-72 border-r bg-muted/30 flex flex-col shrink-0 max-md:w-56">
-          <div className="px-4 py-3 border-b">
-            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Nội dung ({course.sessions.length} buổi)
-            </h3>
+  const currentSession = course.sessions.find((s) => s.id === selectedSession);
+  const sessionIdx = currentSession ? course.sessions.findIndex((s) => s.id === currentSession.id) : -1;
+  const sessionsWithContent = course.sessions.filter((s) => s.materials.length > 0).length;
+
+  // ─── Render ───
+
+  return (
+    <TooltipProvider>
+      <div className="h-[calc(100vh-3.5rem)] flex flex-col">
+        {/* ═══ Top bar ═══ */}
+        <div className="flex items-center justify-between px-4 lg:px-6 py-2.5 border-b bg-background shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <Tooltip>
+              <TooltipTrigger
+                onClick={() => router.push("/admin/khoa-hoc")}
+                className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center transition shrink-0"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 12L6 8l4-4"/></svg>
+              </TooltipTrigger>
+              <TooltipContent>Quay lại danh sách</TooltipContent>
+            </Tooltip>
+            <div className="w-px h-6 bg-border" />
+            <input
+              className="text-base font-semibold bg-transparent border-0 outline-none min-w-0 w-full max-w-md placeholder:text-muted-foreground/40"
+              defaultValue={course.title}
+              placeholder="Tên khóa học..."
+              key={course.title}
+              onBlur={(e) => {
+                if (e.target.value && e.target.value !== course.title) updateCourse({ title: e.target.value });
+              }}
+            />
           </div>
-
-          <ScrollArea className="flex-1">
-            <div className="p-2 space-y-1">
-              {course.sessions.map((session, idx) => {
-                const isSelected = selectedSession === session.id;
-                const hasVideo = session.materials.some((m) => m.type === "video" && m.r2Key);
-                const hasMaterials = session.materials.length > 0;
-
-                return (
-                  <div
-                    key={session.id}
-                    className={`
-                      group flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-150
-                      ${isSelected
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "hover:bg-muted"
-                      }
-                    `}
-                    onClick={() => setSelectedSession(session.id)}
-                    onDoubleClick={() => {
-                      setEditingTitle(session.id);
-                      setTimeout(() => editTitleRef.current?.focus(), 50);
-                    }}
-                  >
-                    <div className={`
-                      w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0
-                      ${isSelected
-                        ? "bg-primary-foreground/20 text-primary-foreground"
-                        : hasVideo
-                          ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                          : hasMaterials
-                            ? "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300"
-                            : "bg-muted text-muted-foreground"
-                      }
-                    `}>
-                      {hasVideo ? "✓" : idx + 1}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      {editingTitle === session.id ? (
-                        <input
-                          ref={editTitleRef}
-                          className="w-full bg-background text-foreground text-sm rounded px-1 py-0.5 outline-none"
-                          defaultValue={session.title}
-                          onBlur={(e) => renameSession(session.id, e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") renameSession(session.id, e.currentTarget.value);
-                            if (e.key === "Escape") setEditingTitle(null);
-                          }}
-                        />
-                      ) : (
-                        <span className="text-sm truncate block">{session.title}</span>
-                      )}
-                      {!isSelected && session.materials.length > 0 && (
-                        <span className="text-xs opacity-50">
-                          {session.materials.map((m) => MATERIAL_CONFIG[m.type].icon).join("")}
-                        </span>
-                      )}
-                    </div>
-
-                    {isSelected && (
-                      <button
-                        className="text-primary-foreground/50 hover:text-primary-foreground text-xs shrink-0"
-                        onClick={(e) => { e.stopPropagation(); setDeleteSessionTarget(session); }}
-                      >
-                        ×
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </ScrollArea>
-
-          <div className="p-3 border-t">
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed hover:border-muted-foreground/40 transition">
-              <span className="text-muted-foreground text-sm">+</span>
-              <input
-                ref={newSessionRef}
-                className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/50"
-                placeholder="Thêm buổi học..."
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") addSession(e.currentTarget.value);
-                }}
-              />
-            </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {course.isPublished && (
+              <Tooltip>
+                <TooltipTrigger
+                  onClick={() => window.open(`/khoa-hoc/${course.slug}`, "_blank")}
+                  className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center transition"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                </TooltipTrigger>
+                <TooltipContent>Xem trang khóa học</TooltipContent>
+              </Tooltip>
+            )}
+            <Badge variant={course.isPublished ? "default" : "secondary"} className="text-[11px]">
+              {course.isPublished ? "Xuất bản" : "Nháp"}
+            </Badge>
+            <Button
+              size="sm"
+              variant={course.isPublished ? "outline" : "default"}
+              onClick={() => updateCourse({ isPublished: !course.isPublished })}
+            >
+              {course.isPublished ? "Chuyển nháp" : "Xuất bản"}
+            </Button>
           </div>
         </div>
 
-        {/* Right panel — Lesson Editor */}
-        <div className="flex-1 overflow-y-auto">
-          {currentSession ? (
-            <div className="max-w-2xl mx-auto px-6 md:px-8 py-8">
-              <div className="mb-8">
-                <div className="text-xs text-muted-foreground mb-1">
-                  Buổi {course.sessions.findIndex((s) => s.id === currentSession.id) + 1}
-                </div>
+        {/* ═══ Main area ═══ */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* ═══ Left sidebar ═══ */}
+          <div className="w-72 lg:w-80 border-r bg-background flex flex-col shrink-0">
+            {/* Stats */}
+            <div className="px-4 py-3 border-b flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Chương trình
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {sessionsWithContent}/{course.sessions.length} buổi có nội dung
+              </span>
+            </div>
+
+            {/* Session list */}
+            <ScrollArea className="flex-1">
+              <div className="p-2 space-y-0.5">
+                {course.sessions.map((session, idx) => {
+                  const isSelected = selectedSession === session.id;
+                  const hasContent = session.materials.length > 0;
+                  const hasVideo = session.materials.some((m) => m.type === "video" && m.r2Key);
+
+                  return (
+                    <div
+                      key={session.id}
+                      className={`
+                        group flex items-center gap-2.5 pl-3 pr-2 py-2.5 rounded-lg cursor-pointer transition-all
+                        ${isSelected ? "bg-primary/10 ring-1 ring-primary/20" : "hover:bg-muted/70"}
+                      `}
+                      onClick={() => setSelectedSession(session.id)}
+                      onDoubleClick={() => {
+                        setEditingTitle(session.id);
+                        setTimeout(() => editTitleRef.current?.focus(), 50);
+                      }}
+                    >
+                      {/* Number / status */}
+                      <div className={`
+                        w-6 h-6 rounded-md flex items-center justify-center text-[11px] font-semibold shrink-0 transition
+                        ${isSelected
+                          ? "bg-primary text-primary-foreground"
+                          : hasVideo
+                            ? "bg-green-500/15 text-green-600 dark:text-green-400"
+                            : hasContent
+                              ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                              : "bg-muted text-muted-foreground"
+                        }
+                      `}>
+                        {hasVideo ? (
+                          <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M13.854 3.646a.5.5 0 010 .708l-7 7a.5.5 0 01-.708 0l-3.5-3.5a.5.5 0 11.708-.708L6.5 10.293l6.646-6.647a.5.5 0 01.708 0z"/></svg>
+                        ) : (
+                          idx + 1
+                        )}
+                      </div>
+
+                      {/* Title */}
+                      <div className="flex-1 min-w-0">
+                        {editingTitle === session.id ? (
+                          <input
+                            ref={editTitleRef}
+                            className="w-full bg-background text-sm rounded px-1.5 py-0.5 outline-none ring-1 ring-primary"
+                            defaultValue={session.title}
+                            onBlur={(e) => renameSession(session.id, e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") renameSession(session.id, e.currentTarget.value);
+                              if (e.key === "Escape") setEditingTitle(null);
+                            }}
+                          />
+                        ) : (
+                          <span className={`text-sm truncate block ${isSelected ? "font-medium" : ""}`}>
+                            {session.title}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Delete */}
+                      <button
+                        className="w-6 h-6 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition shrink-0"
+                        onClick={(e) => { e.stopPropagation(); setDeleteSessionTarget(session); }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+
+            {/* Add session */}
+            <div className="p-3 border-t bg-background">
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-dashed hover:border-primary/40 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20 transition">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted-foreground shrink-0"><path d="M8 3v10M3 8h10"/></svg>
                 <input
-                  className="text-2xl font-bold w-full bg-transparent outline-none placeholder:text-muted-foreground/30"
-                  defaultValue={currentSession.title}
-                  key={currentSession.id + "-title"}
-                  onBlur={(e) => {
-                    if (e.target.value !== currentSession.title) {
-                      renameSession(currentSession.id, e.target.value);
-                    }
+                  ref={newSessionRef}
+                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/50"
+                  placeholder="Thêm buổi học mới..."
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") addSession(e.currentTarget.value);
                   }}
                 />
               </div>
+              <p className="text-[10px] text-muted-foreground/60 mt-1.5 px-1">
+                Nhấn Enter để thêm. Nhấp đôi để đổi tên.
+              </p>
+            </div>
+          </div>
 
-              {/* Video section */}
-              <div className="mb-8">
-                <h4 className="text-sm font-medium text-muted-foreground mb-3">VIDEO BÀI GIẢNG</h4>
-                {currentSession.materials.find((m) => m.type === "video" && m.r2Key) ? (
-                  <div className="flex items-center gap-3 p-4 rounded-xl bg-purple-50 border border-purple-200 dark:bg-purple-950 dark:border-purple-800">
-                    <span className="text-2xl">🎬</span>
-                    <div className="flex-1">
-                      <div className="font-medium text-purple-700 dark:text-purple-300">
-                        {currentSession.materials.find((m) => m.type === "video")?.title}
-                      </div>
-                      <div className="text-xs text-purple-500 dark:text-purple-400">Đã upload</div>
-                    </div>
-                    <button
-                      className="text-xs text-purple-400 hover:text-destructive transition"
-                      onClick={() => {
-                        const mat = currentSession.materials.find((m) => m.type === "video");
-                        if (mat) deleteMaterial(currentSession.id, mat.id);
-                      }}
-                    >
-                      Xóa
-                    </button>
+          {/* ═══ Right panel ═══ */}
+          <div className="flex-1 overflow-y-auto bg-muted/20">
+            {currentSession ? (
+              <div className="max-w-2xl mx-auto px-6 lg:px-8 py-8">
+                {/* Session header */}
+                <div className="mb-8">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className={`
+                      px-2 py-0.5 rounded text-[11px] font-medium
+                      ${currentSession.materials.some((m) => m.type === "video" && m.r2Key)
+                        ? "bg-green-500/15 text-green-600 dark:text-green-400"
+                        : currentSession.materials.length > 0
+                          ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                          : "bg-muted text-muted-foreground"
+                      }
+                    `}>
+                      Buổi {sessionIdx + 1}
+                    </span>
+                    {currentSession.materials.some((m) => m.type === "video" && m.r2Key) && (
+                      <span className="text-[11px] text-green-600 dark:text-green-400">Sẵn sàng</span>
+                    )}
                   </div>
-                ) : (
-                  <FileUpload
-                    courseId={id as string}
-                    sessionId={currentSession.id}
-                    accept="video/*"
-                    onUploadComplete={(key, file) => handleFileUpload(currentSession.id, key, file)}
+                  <input
+                    className="text-2xl font-bold w-full bg-transparent outline-none placeholder:text-muted-foreground/30"
+                    defaultValue={currentSession.title}
+                    placeholder="Tên buổi học..."
+                    key={currentSession.id + "-title"}
+                    onBlur={(e) => {
+                      if (e.target.value && e.target.value !== currentSession.title) {
+                        renameSession(currentSession.id, e.target.value);
+                      }
+                    }}
                   />
-                )}
-              </div>
+                </div>
 
-              {/* Materials section */}
-              <div className="mb-8">
-                <h4 className="text-sm font-medium text-muted-foreground mb-3">TÀI LIỆU</h4>
-
-                <div className="space-y-3 mb-4">
-                  {currentSession.materials
-                    .filter((m) => m.type !== "video")
-                    .map((mat) => (
-                      <MaterialEditor
+                {/* Existing materials */}
+                {currentSession.materials.length > 0 && (
+                  <div className="space-y-2 mb-6">
+                    {currentSession.materials.map((mat) => (
+                      <MaterialCard
                         key={mat.id}
                         material={mat}
                         courseId={id as string}
                         sessionId={currentSession.id}
+                        onSave={(data) => saveMaterial(mat.id, data)}
                         onDelete={() => deleteMaterial(currentSession.id, mat.id)}
-                        onUpdate={loadCourse}
                       />
                     ))}
-                </div>
+                  </div>
+                )}
 
-                <div className="relative">
-                  <button
-                    onClick={() => setAddingMaterial(!addingMaterial)}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed text-sm text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground transition"
-                  >
-                    + Thêm tài liệu
-                  </button>
+                {/* Add material — type picker cards */}
+                <div>
+                  <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                    {currentSession.materials.length > 0 ? "Thêm nội dung" : "Bắt đầu thêm nội dung"}
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    {MATERIAL_TYPES.map((mt) => {
+                      // Don't show video option if already has one
+                      const hasVideo = mt.type === "video" && currentSession.materials.some((m) => m.type === "video");
+                      if (hasVideo) return null;
 
-                  {addingMaterial && (
-                    <div className="absolute top-full left-0 right-0 mt-2 bg-popover rounded-xl shadow-lg border p-2 z-10 animate-in fade-in duration-150">
-                      {(["pdf", "recap"] as const).map((type) => (
+                      return (
                         <button
-                          key={type}
-                          onClick={() => {
-                            addMaterial(currentSession.id, type);
-                            setAddingMaterial(false);
-                          }}
-                          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted transition text-left"
+                          key={mt.type}
+                          onClick={() => addMaterial(currentSession.id, mt.type)}
+                          className="flex items-center gap-3 p-3.5 rounded-lg border border-dashed hover:border-primary/40 hover:bg-primary/5 transition text-left group"
                         >
-                          <span className="text-lg">{MATERIAL_CONFIG[type].icon}</span>
+                          <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${mt.colors} transition`}>
+                            {mt.icon}
+                          </div>
                           <div>
-                            <div className="text-sm font-medium">{MATERIAL_CONFIG[type].label}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {type === "pdf" && "Upload slide hoặc tài liệu PDF"}
-                              {type === "recap" && "Tóm tắt nội dung buổi học"}
-                            </div>
+                            <div className="text-sm font-medium group-hover:text-primary transition">{mt.label}</div>
+                            <div className="text-[11px] text-muted-foreground">{mt.description}</div>
                           </div>
                         </button>
-                      ))}
-                      <button
-                        onClick={() => {
-                          setLinkDialog({ sessionId: currentSession.id });
-                          setAddingMaterial(false);
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted transition text-left"
-                      >
-                        <span className="text-lg">{MATERIAL_CONFIG.link.icon}</span>
-                        <div>
-                          <div className="text-sm font-medium">{MATERIAL_CONFIG.link.label}</div>
-                          <div className="text-xs text-muted-foreground">Link Google Docs, Sheets, bài viết</div>
-                        </div>
-                      </button>
+                      );
+                    })}
+                  </div>
 
-                      <div className="border-t mt-1 pt-1">
-                        <FileUpload
-                          courseId={id as string}
-                          sessionId={currentSession.id}
-                          accept=".pdf,.ppt,.pptx,image/*"
-                          onUploadComplete={(key, file) => {
-                            handleFileUpload(currentSession.id, key, file);
-                            setAddingMaterial(false);
-                          }}
-                        />
+                  {/* Quick file upload */}
+                  <div className="mt-4">
+                    <FileUpload
+                      courseId={id as string}
+                      sessionId={currentSession.id}
+                      onUploadComplete={(key, file) => handleFileUpload(currentSession.id, key, file)}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* ═══ Empty state — no session selected ═══ */
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center max-w-sm px-6">
+                  {course.sessions.length === 0 ? (
+                    <>
+                      <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mx-auto mb-6">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-primary">
+                          <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                        </svg>
                       </div>
-                    </div>
+                      <h3 className="text-lg font-semibold mb-2">Xây dựng chương trình học</h3>
+                      <p className="text-sm text-muted-foreground mb-6">
+                        Thêm buổi học đầu tiên ở sidebar bên trái. Mỗi buổi có thể chứa video, tài liệu, recap và link.
+                      </p>
+                      <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                        <kbd className="px-1.5 py-0.5 rounded bg-muted border text-[10px]">Enter</kbd>
+                        <span>để thêm nhanh</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-16 h-16 rounded-xl bg-muted flex items-center justify-center mx-auto mb-4">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted-foreground"><path d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5"/></svg>
+                      </div>
+                      <p className="text-muted-foreground">Chọn một buổi học để chỉnh sửa nội dung</p>
+                    </>
                   )}
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-center h-full text-muted-foreground">
-              <div className="text-center space-y-2">
-                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted-foreground">
-                    <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/>
-                    <path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/>
-                  </svg>
-                </div>
-                <p>Chọn một buổi học để chỉnh sửa</p>
-                <p className="text-sm">hoặc thêm buổi học mới từ sidebar bên trái</p>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Delete session dialog */}
+      {/* Dialogs */}
       <ConfirmDialog
         open={!!deleteSessionTarget}
         onOpenChange={(open) => !open && setDeleteSessionTarget(null)}
         title="Xóa buổi học?"
-        description={`Bạn có chắc muốn xóa "${deleteSessionTarget?.title}"? Tất cả tài liệu trong buổi học này sẽ bị xóa vĩnh viễn.`}
+        description={`Xóa "${deleteSessionTarget?.title}" và tất cả nội dung? Hành động này không thể hoàn tác.`}
         confirmLabel="Xóa"
         destructive
         onConfirm={() => deleteSessionTarget && deleteSession(deleteSessionTarget)}
       />
 
-      {/* Add link dialog (replaces prompt()) */}
-      <Dialog open={!!linkDialog} onOpenChange={(open) => !open && setLinkDialog(null)}>
-        <DialogContent>
+      <Dialog open={linkDialog !== null} onOpenChange={(open) => !open && setLinkDialog(null)}>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Thêm link tài liệu</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Tên tài liệu</Label>
-              <Input
-                value={linkTitle}
-                onChange={(e) => setLinkTitle(e.target.value)}
-                placeholder="VD: Bài tập Google Sheets"
-              />
+            <div className="space-y-1.5">
+              <Label>Tên hiển thị</Label>
+              <Input value={linkTitle} onChange={(e) => setLinkTitle(e.target.value)} placeholder="VD: Bài tập tuần 1" autoFocus />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label>URL</Label>
-              <Input
-                value={linkUrl}
-                onChange={(e) => setLinkUrl(e.target.value)}
-                placeholder="https://docs.google.com/..."
-              />
+              <Input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://docs.google.com/..." onKeyDown={(e) => e.key === "Enter" && linkDialog !== null && addLinkMaterial(linkDialog)} />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setLinkDialog(null)}>Hủy</Button>
-            <Button
-              onClick={() => linkDialog && addLinkMaterial(linkDialog.sessionId)}
-              disabled={!linkTitle || !linkUrl}
-            >
-              Thêm
-            </Button>
+            <Button onClick={() => linkDialog !== null && addLinkMaterial(linkDialog)} disabled={!linkTitle || !linkUrl}>Thêm</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </TooltipProvider>
   );
 }
