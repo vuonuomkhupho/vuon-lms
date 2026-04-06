@@ -50,7 +50,7 @@ export default async function CourseDetailPage({
         user={session ? { name: session.user.name, email: session.user.email, role: (session.user as any).role } : null}
       />
 
-      <main className="flex-1 container mx-auto px-4 py-10 max-w-3xl">
+      <main className="flex-1 container mx-auto px-4 py-10 max-w-4xl">
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-3">
             <Badge variant="outline">{course.sessions.length} buổi học</Badge>

@@ -147,7 +147,7 @@ export function LessonClient({
                       <div className={`text-[13px] leading-snug ${isCurrent ? "font-semibold" : isDone ? "text-muted-foreground" : ""}`}>
                         {session.title}
                       </div>
-                      <div className="text-[11px] text-muted-foreground mt-0.5">
+                      <div className="text-xs text-muted-foreground mt-0.5">
                         Buổi {i + 1}
                       </div>
                     </div>
@@ -157,7 +157,7 @@ export function LessonClient({
             </div>
 
             <div className="p-4 border-t">
-              <div className="flex justify-between text-[11px] text-muted-foreground mb-1.5">
+              <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
                 <span>Tiến độ</span>
                 <span>{doneCount}/{totalSessions} buổi</span>
               </div>
@@ -211,7 +211,7 @@ export function LessonClient({
                       </div>
                       <div className="flex-1">
                         <div className="text-[13px] font-medium">{pdf.title}</div>
-                        <div className="text-[11px] text-muted-foreground">PDF</div>
+                        <div className="text-xs text-muted-foreground">PDF</div>
                       </div>
                     </div>
                   ))}
@@ -228,7 +228,7 @@ export function LessonClient({
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-[13px] font-medium text-primary group-hover:underline">{link.title}</div>
-                        <div className="text-[11px] text-muted-foreground truncate">{link.externalUrl}</div>
+                        <div className="text-xs text-muted-foreground truncate">{link.externalUrl}</div>
                       </div>
                     </a>
                   ))}

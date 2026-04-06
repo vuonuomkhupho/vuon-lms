@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, ChevronDown, Plus, X, Check, ExternalLink, Video, FileText, PenLine, Link as LinkIcon, BookOpen, MousePointerClick, GripVertical, Settings, CircleAlert } from "lucide-react";
+import { ChevronLeft, ChevronDown, Plus, X, Check, ExternalLink, Video, FileText, PenLine, Link as LinkIcon, BookOpen, MousePointerClick, GripVertical, Settings, CircleAlert, Trash2 } from "lucide-react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -17,6 +17,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { FileUpload } from "@/components/file-upload";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { toast } from "sonner";
@@ -88,22 +89,23 @@ function getMaterialConfig(type: string) {
   return MATERIAL_TYPES.find((m) => m.type === type) || MATERIAL_TYPES[0];
 }
 
-// ─── MaterialCard ───
+// ─── ContentBlock (always-visible, inline editing, draggable) ───
 
-function MaterialCard({
+function ContentBlock({
   material,
   onSave,
   onDelete,
   courseId,
   sessionId,
+  dragHandleProps,
 }: {
   material: Material;
   onSave: (data: Record<string, unknown>) => Promise<void>;
   onDelete: () => void;
   courseId: string;
   sessionId: number;
+  dragHandleProps?: Record<string, unknown>;
 }) {
-  const [expanded, setExpanded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const config = getMaterialConfig(material.type);
@@ -114,105 +116,111 @@ function MaterialCard({
     setSaving(false);
   }
 
-  const statusText = {
-    recap: material.contentText ? "Đã viết" : "Chưa có nội dung",
-    link: material.externalUrl ? new URL(material.externalUrl).hostname : "Chưa có URL",
-    pdf: material.r2Key ? "Đã upload" : "Chưa upload",
-    video: material.r2Key ? "Đã upload" : "Chưa upload",
-  }[material.type] || "";
-
   return (
     <>
-      <div className={`rounded-lg border transition-all ${expanded ? "shadow-sm ring-1 ring-border" : "hover:shadow-sm"}`}>
-        <div
-          className="flex items-center gap-3 px-4 py-3 cursor-pointer"
-          onClick={() => setExpanded(!expanded)}
-        >
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${config.colors}`}>
-            <config.icon className="w-4 h-4" />
+      <div className="group rounded-xl border bg-card hover:shadow-sm transition-shadow">
+        {/* Block header */}
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-transparent group-hover:border-border transition-colors">
+          <button
+            className="w-6 h-8 flex items-center justify-center cursor-grab active:cursor-grabbing opacity-40 hover:opacity-100 transition touch-none shrink-0"
+            {...dragHandleProps}
+          >
+            <GripVertical className="w-4 h-4 text-muted-foreground" />
+          </button>
+          <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${config.colors}`}>
+            <config.icon className="w-3.5 h-3.5" />
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium truncate">{material.title}</div>
-            <div className="text-xs text-muted-foreground">{statusText}</div>
-          </div>
-          {saving && (
-            <span className="text-xs text-muted-foreground animate-pulse">Lưu...</span>
-          )}
-          <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
+          <span className="text-sm font-medium flex-1">{config.label}</span>
+          {saving && <span className="text-xs text-muted-foreground animate-pulse">Lưu...</span>}
+          <button
+            className="w-7 h-7 rounded-md flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive text-muted-foreground transition shrink-0"
+            onClick={() => setConfirmDelete(true)}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
         </div>
 
-        {expanded && (
-          <div className="px-4 pb-4 border-t">
-            {material.type === "recap" && (
-              <div className="mt-3">
-                <Textarea
-                  className="min-h-[160px] resize-y"
-                  defaultValue={material.contentText || ""}
-                  placeholder="Viết tóm tắt nội dung buổi học..."
-                  onBlur={(e) => save({ contentText: e.target.value })}
-                />
+        {/* Block content — always visible, type-specific */}
+        <div className="px-4 py-4 pl-[3.25rem]">
+          {material.type === "video" && (
+            material.r2Key ? (
+              <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-lg">
+                <Check className="w-4 h-4 text-success shrink-0" />
+                <span className="text-sm flex-1 truncate">{material.title}</span>
+                <button className="text-xs text-muted-foreground hover:text-destructive transition" onClick={() => save({ r2Key: null })}>Xóa file</button>
               </div>
-            )}
+            ) : (
+              <FileUpload courseId={courseId} sessionId={sessionId} accept="video/*" onUploadComplete={async (key) => { await save({ r2Key: key }); }} />
+            )
+          )}
 
-            {material.type === "link" && (
-              <div className="mt-3 space-y-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Tên hiển thị</Label>
-                  <Input
-                    defaultValue={material.title}
-                    onBlur={(e) => save({ title: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">URL</Label>
-                  <Input
-                    defaultValue={material.externalUrl || ""}
-                    placeholder="https://..."
-                    onBlur={(e) => save({ externalUrl: e.target.value })}
-                  />
-                </div>
+          {material.type === "pdf" && (
+            material.r2Key ? (
+              <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-lg">
+                <Check className="w-4 h-4 text-success shrink-0" />
+                <span className="text-sm flex-1">File đã upload</span>
+                <button className="text-xs text-muted-foreground hover:text-destructive transition" onClick={() => save({ r2Key: null })}>Xóa file</button>
               </div>
-            )}
+            ) : (
+              <FileUpload courseId={courseId} sessionId={sessionId} accept=".pdf,.ppt,.pptx,image/*" onUploadComplete={async (key) => { await save({ r2Key: key }); }} />
+            )
+          )}
 
-            {material.type === "pdf" && (
-              <div className="mt-3">
-                {material.r2Key ? (
-                  <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                    <Check className="w-4 h-4 text-success shrink-0" />
-                    <span className="text-sm text-muted-foreground flex-1">File đã upload</span>
-                    <button className="text-xs text-destructive hover:underline" onClick={() => setConfirmDelete(true)}>Xóa</button>
-                  </div>
-                ) : (
-                  <FileUpload courseId={courseId} sessionId={sessionId} accept=".pdf,.ppt,.pptx" onUploadComplete={async (key) => { await save({ r2Key: key }); }} />
-                )}
-              </div>
-            )}
+          {material.type === "recap" && (
+            <Textarea
+              className="min-h-[180px] resize-y border-dashed"
+              defaultValue={material.contentText || ""}
+              key={`recap-${material.id}`}
+              placeholder="Viết nội dung recap cho buổi học này..."
+              onBlur={(e) => save({ contentText: e.target.value })}
+            />
+          )}
 
-            {material.type === "video" && (
-              <div className="mt-3">
-                {material.r2Key ? (
-                  <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                    <Check className="w-4 h-4 text-success shrink-0" />
-                    <span className="text-sm text-muted-foreground flex-1">{material.title}</span>
-                    <button className="text-xs text-destructive hover:underline" onClick={() => setConfirmDelete(true)}>Xóa</button>
-                  </div>
-                ) : (
-                  <FileUpload courseId={courseId} sessionId={sessionId} accept="video/*" onUploadComplete={async (key) => { await save({ r2Key: key }); }} />
-                )}
-              </div>
-            )}
-
-            <div className="mt-3 flex justify-end">
-              <button className="text-xs text-muted-foreground hover:text-destructive transition" onClick={() => setConfirmDelete(true)}>
-                Xóa tài liệu
-              </button>
+          {material.type === "link" && (
+            <div className="space-y-3">
+              <Input
+                defaultValue={material.title}
+                key={`link-title-${material.id}`}
+                placeholder="Tên hiển thị"
+                onBlur={(e) => save({ title: e.target.value })}
+              />
+              <Input
+                defaultValue={material.externalUrl || ""}
+                key={`link-url-${material.id}`}
+                placeholder="https://docs.google.com/..."
+                onBlur={(e) => save({ externalUrl: e.target.value })}
+              />
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      <ConfirmDialog open={confirmDelete} onOpenChange={setConfirmDelete} title="Xóa tài liệu?" description={`Xóa "${material.title}"?`} confirmLabel="Xóa" destructive onConfirm={onDelete} />
+      <ConfirmDialog open={confirmDelete} onOpenChange={setConfirmDelete} title="Xóa block?" description={`Xóa "${material.title}" khỏi buổi học này?`} confirmLabel="Xóa" destructive onConfirm={onDelete} />
     </>
+  );
+}
+
+// ─── Sortable Content Block wrapper ───
+
+function SortableContentBlock(props: {
+  material: Material;
+  onSave: (data: Record<string, unknown>) => Promise<void>;
+  onDelete: () => void;
+  courseId: string;
+  sessionId: number;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.material.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <ContentBlock {...props} dragHandleProps={{ ...attributes, ...listeners }} />
+    </div>
   );
 }
 
@@ -273,7 +281,7 @@ function SortableSessionItem({
       </button>
 
       <div className={`
-        w-6 h-6 rounded-md flex items-center justify-center text-[11px] font-semibold shrink-0 transition
+        w-6 h-6 rounded-md flex items-center justify-center text-xs font-semibold shrink-0 transition
         ${isSelected
           ? "bg-primary text-primary-foreground"
           : hasVideo
@@ -472,6 +480,42 @@ export default function EditCoursePage() {
     loadCourse();
   }
 
+  async function handleMaterialDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !course || !selectedSession) return;
+
+    const session = course.sessions.find((s) => s.id === selectedSession);
+    if (!session) return;
+
+    const materials = [...session.materials];
+    const oldIndex = materials.findIndex((m) => m.id === active.id);
+    const newIndex = materials.findIndex((m) => m.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    // Optimistic reorder
+    const [moved] = materials.splice(oldIndex, 1);
+    materials.splice(newIndex, 0, moved);
+
+    if (course) {
+      const updatedSessions = course.sessions.map((s) =>
+        s.id === session.id ? { ...s, materials } : s
+      );
+      setCourse({ ...course, sessions: updatedSessions });
+    }
+
+    // Persist order via metadata
+    await Promise.all(
+      materials.map((m, i) =>
+        fetch(`/api/materials/${m.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ metadata: { ...m.metadata, orderIndex: i } }),
+        })
+      )
+    );
+    toast.success("Đã sắp xếp lại");
+  }
+
   function handlePublishClick() {
     if (!course) return;
     if (course.isPublished) {
@@ -496,7 +540,7 @@ export default function EditCoursePage() {
 
   if (loading) {
     return (
-      <div className="h-[calc(100vh-3.5rem)] flex">
+      <div className="h-[calc(100vh-4rem)] flex">
         <div className="w-80 border-r p-4 space-y-3">
           <Skeleton className="h-8 w-full" />
           <Skeleton className="h-10 w-full" />
@@ -531,7 +575,7 @@ export default function EditCoursePage() {
 
   return (
     <TooltipProvider>
-      <div className="h-[calc(100vh-3.5rem)] flex flex-col">
+      <div className="h-[calc(100vh-4rem)] flex flex-col">
         {/* ═══ Top bar ═══ */}
         <div className="flex items-center justify-between px-4 lg:px-6 py-2.5 border-b bg-background shrink-0">
           <div className="flex items-center gap-3 min-w-0">
@@ -567,7 +611,7 @@ export default function EditCoursePage() {
                 <TooltipContent>Xem trang khóa học</TooltipContent>
               </Tooltip>
             )}
-            <Badge variant={course.isPublished ? "default" : "secondary"} className="text-[11px]">
+            <Badge variant={course.isPublished ? "default" : "secondary"} className="text-xs">
               {course.isPublished ? "Xuất bản" : "Nháp"}
             </Badge>
             <Button
@@ -730,29 +774,25 @@ export default function EditCoursePage() {
                 </div>
               )}
 
-              {/* ═══ Content tab ═══ */}
+              {/* ═══ Content tab — Block-based editor ═══ */}
               {rightTab === "content" && currentSession ? (
-              <div className="max-w-2xl mx-auto px-6 lg:px-8 py-8">
+              <div className="max-w-3xl mx-auto px-6 lg:px-10 py-8">
                 {/* Session header */}
                 <div className="mb-8">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className={`
-                      px-2 py-0.5 rounded text-[11px] font-medium
-                      ${currentSession.materials.some((m) => m.type === "video" && m.r2Key)
-                        ? "bg-success/15 text-success"
-                        : currentSession.materials.length > 0
-                          ? "bg-warning/15 text-warning"
-                          : "bg-muted text-muted-foreground"
-                      }
-                    `}>
-                      Buổi {sessionIdx + 1}
-                    </span>
-                    {currentSession.materials.some((m) => m.type === "video" && m.r2Key) && (
-                      <span className="text-[11px] text-success">Sẵn sàng</span>
-                    )}
-                  </div>
+                  <span className={`
+                    inline-block px-2.5 py-1 rounded-md text-xs font-medium mb-3
+                    ${currentSession.materials.some((m) => m.type === "video" && m.r2Key)
+                      ? "bg-success/15 text-success"
+                      : currentSession.materials.length > 0
+                        ? "bg-warning/15 text-warning"
+                        : "bg-muted text-muted-foreground"
+                    }
+                  `}>
+                    Buổi {sessionIdx + 1}
+                    {currentSession.materials.some((m) => m.type === "video" && m.r2Key) && " · Sẵn sàng"}
+                  </span>
                   <input
-                    className="text-2xl font-bold w-full bg-transparent outline-none placeholder:text-muted-foreground/30"
+                    className="text-3xl font-bold w-full bg-transparent outline-none placeholder:text-muted-foreground/30 block"
                     defaultValue={currentSession.title}
                     placeholder="Tên buổi học..."
                     key={currentSession.id + "-title"}
@@ -764,59 +804,55 @@ export default function EditCoursePage() {
                   />
                 </div>
 
-                {/* Existing materials */}
-                {currentSession.materials.length > 0 && (
-                  <div className="space-y-2 mb-6">
-                    {currentSession.materials.map((mat) => (
-                      <MaterialCard
-                        key={mat.id}
-                        material={mat}
-                        courseId={id as string}
-                        sessionId={currentSession.id}
-                        onSave={(data) => saveMaterial(mat.id, data)}
-                        onDelete={() => deleteMaterial(currentSession.id, mat.id)}
-                      />
-                    ))}
-                  </div>
-                )}
+                {/* Block stream — draggable materials */}
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleMaterialDragEnd}>
+                  <SortableContext items={currentSession.materials.map((m) => m.id)} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-3">
+                      {currentSession.materials.map((mat) => (
+                        <SortableContentBlock
+                          key={mat.id}
+                          material={mat}
+                          courseId={id as string}
+                          sessionId={currentSession.id}
+                          onSave={(data) => saveMaterial(mat.id, data)}
+                          onDelete={() => deleteMaterial(currentSession.id, mat.id)}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
 
-                {/* Add material — type picker cards */}
-                <div>
-                  <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
-                    {currentSession.materials.length > 0 ? "Thêm nội dung" : "Bắt đầu thêm nội dung"}
-                  </h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    {MATERIAL_TYPES.map((mt) => {
-                      // Don't show video option if already has one
-                      const hasVideo = mt.type === "video" && currentSession.materials.some((m) => m.type === "video");
-                      if (hasVideo) return null;
-
-                      return (
-                        <button
-                          key={mt.type}
-                          onClick={() => addMaterial(currentSession.id, mt.type)}
-                          className="flex items-center gap-3 p-3.5 rounded-lg border border-dashed hover:border-primary/40 hover:bg-primary/5 transition text-left group"
-                        >
-                          <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${mt.colors} transition`}>
-                            <mt.icon className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium group-hover:text-primary transition">{mt.label}</div>
-                            <div className="text-[11px] text-muted-foreground">{mt.description}</div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Quick file upload */}
-                  <div className="mt-4">
-                    <FileUpload
-                      courseId={id as string}
-                      sessionId={currentSession.id}
-                      onUploadComplete={(key, file) => handleFileUpload(currentSession.id, key, file)}
-                    />
-                  </div>
+                {/* Add block button */}
+                <div className="mt-6 flex items-center gap-3">
+                  <div className="flex-1 h-px bg-border" />
+                  <Popover>
+                    <PopoverTrigger className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-dashed hover:border-primary/40 hover:bg-primary/5 text-sm text-muted-foreground hover:text-foreground transition">
+                      <Plus className="w-4 h-4" />
+                      Thêm block
+                    </PopoverTrigger>
+                    <PopoverContent side="bottom" sideOffset={8} className="w-64 p-2">
+                      {MATERIAL_TYPES.map((mt) => {
+                        const hasVideo = mt.type === "video" && currentSession.materials.some((m) => m.type === "video");
+                        if (hasVideo) return null;
+                        return (
+                          <button
+                            key={mt.type}
+                            onClick={() => addMaterial(currentSession.id, mt.type)}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted transition text-left"
+                          >
+                            <div className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 ${mt.colors}`}>
+                              <mt.icon className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium">{mt.label}</div>
+                              <div className="text-xs text-muted-foreground">{mt.description}</div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </PopoverContent>
+                  </Popover>
+                  <div className="flex-1 h-px bg-border" />
                 </div>
               </div>
             ) : rightTab === "content" ? (

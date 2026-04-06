@@ -44,6 +44,7 @@ export const updateMaterialSchema = z.object({
   r2Key: z.string().max(500).nullable().optional(),
   externalUrl: z.string().max(2000).nullable().optional(),
   contentText: z.string().max(50000).nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 
 // ─── Enrollments ───

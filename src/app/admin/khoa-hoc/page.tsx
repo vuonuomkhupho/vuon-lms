@@ -172,7 +172,7 @@ export default function AdminCoursesPage() {
                     <div className="flex justify-between items-start">
                       <Badge
                         variant={course.isPublished ? "default" : "secondary"}
-                        className="bg-white/20 text-white border-0 backdrop-blur-sm text-[11px]"
+                        className="bg-white/20 text-white border-0 backdrop-blur-sm text-xs"
                       >
                         {course.isPublished ? "Xuất bản" : "Nháp"}
                       </Badge>
@@ -225,7 +225,7 @@ export default function AdminCoursesPage() {
                   {/* Progress bar */}
                   {sessionCount > 0 && (
                     <div>
-                      <div className="flex justify-between text-[11px] text-muted-foreground mb-1">
+                      <div className="flex justify-between text-xs text-muted-foreground mb-1">
                         <span>Nội dung</span>
                         <span>{sessionsWithVideo}/{sessionCount} buổi có video</span>
                       </div>

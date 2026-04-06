@@ -61,7 +61,7 @@ export default async function DashboardPage() {
     .sort((a, b) => a.progressPercent - b.progressPercent)[0];
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className="container mx-auto px-4 py-8 max-w-6xl">
       <h1 className="text-2xl font-bold mb-1">Khóa học của tôi</h1>
       <p className="text-muted-foreground mb-8">Tiếp tục học từ nơi bạn dừng lại</p>
 
