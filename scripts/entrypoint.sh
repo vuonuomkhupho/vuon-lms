@@ -103,7 +103,7 @@ except:
     sleep 3
   done
 
-  # Build bench new-site command based on DB type
+  # Create site (without apps — install them separately for reliability)
   if [ "$DB_TYPE" = "postgres" ]; then
     su frappe -c "cd /home/frappe/frappe-bench && bench new-site '${SITE_NAME}' \
       --db-type postgres \
@@ -113,21 +113,24 @@ except:
       --db-root-username '${DB_USER:-postgres}' \
       --db-root-password '${DB_PASSWORD}' \
       --admin-password '${ADMIN_PASSWORD:-admin}' \
-      --install-app lms \
-      --install-app dfp_external_storage \
-      --verbose" || echo "WARNING: bench new-site had errors, attempting migrate..."
+      --verbose" || true
   else
     su frappe -c "cd /home/frappe/frappe-bench && bench new-site '${SITE_NAME}' \
       --mariadb-root-password '${DB_PASSWORD}' \
       --admin-password '${ADMIN_PASSWORD:-admin}' \
-      --install-app lms \
-      --install-app dfp_external_storage \
-      --no-mariadb-socket" || echo "WARNING: bench new-site had errors, attempting migrate..."
+      --no-mariadb-socket" || true
   fi
 
-  # Run migrate to ensure all doctypes/modules are set up
+  # Install apps one by one (more reliable than --install-app flag)
+  echo "Installing apps..."
+  su frappe -c "cd /home/frappe/frappe-bench && bench --site '${SITE_NAME}' install-app payments" || true
+  su frappe -c "cd /home/frappe/frappe-bench && bench --site '${SITE_NAME}' install-app lms"
+  su frappe -c "cd /home/frappe/frappe-bench && bench --site '${SITE_NAME}' install-app dfp_external_storage" || true
+
+  # Run migrate to finalize
   su frappe -c "cd /home/frappe/frappe-bench && bench --site '${SITE_NAME}' migrate" || true
 
+  # Set homepage to LMS instead of desk
   su frappe -c "cd /home/frappe/frappe-bench && \
     bench --site '${SITE_NAME}' set-config host_name '${HOST_NAME:-http://localhost:8000}' && \
     bench --site '${SITE_NAME}' set-config developer_mode 1"

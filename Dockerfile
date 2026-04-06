@@ -16,8 +16,9 @@ RUN bench init \
 
 WORKDIR /home/frappe/frappe-bench
 
-# Install apps — LMS only, no ERPNext
-RUN bench get-app --branch=${LMS_BRANCH} lms && \
+# Install apps — LMS + dependencies, no ERPNext
+RUN bench get-app payments && \
+    bench get-app --branch=${LMS_BRANCH} lms && \
     bench get-app --branch=${DFP_BRANCH} https://github.com/developmentforpeople/dfp_external_storage
 
 # Build frontend assets
