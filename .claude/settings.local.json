@@ -36,7 +36,8 @@
       "Bash(npm install:*)",
       "Bash(npx shadcn@latest:*)",
       "Bash(npx drizzle-kit:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "WebFetch(domain:www.nngroup.com)"
     ]
   }
 }

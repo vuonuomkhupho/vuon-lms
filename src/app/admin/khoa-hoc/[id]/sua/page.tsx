@@ -5,6 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { FileUpload } from "@/components/file-upload";
+import { toast } from "sonner";
 
 interface Material {
   id: number;
@@ -13,6 +16,7 @@ interface Material {
   r2Key?: string;
   externalUrl?: string;
   contentText?: string;
+  metadata?: Record<string, unknown>;
 }
 
 interface Session {
@@ -26,23 +30,17 @@ interface Session {
 interface Course {
   id: number;
   title: string;
+  slug: string;
   description: string | null;
   isPublished: boolean;
   sessions: Session[];
 }
 
-const MATERIAL_ICONS: Record<string, string> = {
-  video: "🎬",
-  pdf: "📄",
-  recap: "📝",
-  link: "🔗",
-};
-
-const MATERIAL_COLORS: Record<string, string> = {
-  video: "bg-purple-50 border-purple-200 text-purple-700",
-  pdf: "bg-blue-50 border-blue-200 text-blue-700",
-  recap: "bg-amber-50 border-amber-200 text-amber-700",
-  link: "bg-emerald-50 border-emerald-200 text-emerald-700",
+const MATERIAL_CONFIG: Record<string, { icon: string; label: string; color: string }> = {
+  video: { icon: "🎬", label: "Video", color: "bg-purple-50 text-purple-700 border-purple-200" },
+  pdf: { icon: "📄", label: "PDF / Slide", color: "bg-blue-50 text-blue-700 border-blue-200" },
+  recap: { icon: "📝", label: "Recap", color: "bg-amber-50 text-amber-700 border-amber-200" },
+  link: { icon: "🔗", label: "Link", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
 };
 
 export default function EditCoursePage() {
@@ -50,60 +48,85 @@ export default function EditCoursePage() {
   const router = useRouter();
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
-  const [expandedSession, setExpandedSession] = useState<number | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<number | null>(null);
+  const [editingTitle, setEditingTitle] = useState<number | null>(null);
+  const [addingMaterial, setAddingMaterial] = useState(false);
   const newSessionRef = useRef<HTMLInputElement>(null);
+  const editTitleRef = useRef<HTMLInputElement>(null);
 
   async function loadCourse() {
     const res = await fetch(`/api/courses/${id}`);
-    if (res.ok) setCourse(await res.json());
+    if (res.ok) {
+      const data = await res.json();
+      setCourse(data);
+      // Auto-select first session if none selected
+      if (!selectedSession && data.sessions.length > 0) {
+        setSelectedSession(data.sessions[0].id);
+      }
+    }
     setLoading(false);
   }
 
   useEffect(() => { loadCourse(); }, [id]);
 
   async function updateCourse(data: Partial<Course>) {
-    setSaving(true);
     await fetch(`/api/courses/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    await loadCourse();
-    setSaving(false);
+    toast.success("Đã lưu");
+    loadCourse();
   }
 
   async function addSession(title: string) {
     if (!title.trim()) return;
-    await fetch(`/api/courses/${id}/sessions`, {
+    const res = await fetch(`/api/courses/${id}/sessions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title }),
     });
-    await loadCourse();
+    const session = await res.json();
+    toast.success("Đã thêm buổi học");
     if (newSessionRef.current) newSessionRef.current.value = "";
+    await loadCourse();
+    setSelectedSession(session.id);
+  }
+
+  async function renameSession(sessionId: number, title: string) {
+    await fetch(`/api/courses/${id}/sessions/${sessionId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title }),
+    });
+    setEditingTitle(null);
+    loadCourse();
   }
 
   async function deleteSession(sessionId: number) {
     if (!confirm("Xóa buổi học này và tất cả tài liệu?")) return;
     await fetch(`/api/courses/${id}/sessions/${sessionId}`, { method: "DELETE" });
+    toast.success("Đã xóa buổi học");
+    if (selectedSession === sessionId) setSelectedSession(null);
     loadCourse();
   }
 
-  async function addMaterial(sessionId: number, type: Material["type"]) {
-    let body: Record<string, unknown> = { type };
+  async function addMaterial(sessionId: number, type: Material["type"], extra?: Record<string, unknown>) {
+    const body: Record<string, unknown> = { type, ...extra };
 
     if (type === "link") {
-      const title = prompt("Tên tài liệu:") || "";
-      const url = prompt("URL (Google Docs, Sheets...):") || "";
+      const title = prompt("Tên tài liệu:");
+      const url = prompt("URL (Google Docs, Sheets...):");
       if (!title || !url) return;
-      body = { ...body, title, externalUrl: url };
+      body.title = title;
+      body.externalUrl = url;
     } else if (type === "recap") {
-      body = { ...body, title: "Recap", contentText: "" };
+      body.title = "Recap";
+      body.contentText = "";
     } else if (type === "video") {
-      body = { ...body, title: "Video bài giảng" };
+      body.title = "Video bài giảng";
     } else {
-      body = { ...body, title: "Slide bài giảng" };
+      body.title = "Slide bài giảng";
     }
 
     await fetch(`/api/courses/${id}/sessions/${sessionId}/materials`, {
@@ -111,6 +134,7 @@ export default function EditCoursePage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
+    toast.success(`Đã thêm ${MATERIAL_CONFIG[type].label}`);
     loadCourse();
   }
 
@@ -119,260 +143,324 @@ export default function EditCoursePage() {
       `/api/courses/${id}/sessions/${sessionId}/materials?materialId=${materialId}`,
       { method: "DELETE" }
     );
+    toast.success("Đã xóa");
     loadCourse();
   }
 
-  async function uploadFile(sessionId: number, materialId: number, file: File) {
-    // Get presigned URL
-    const res = await fetch("/api/upload", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        filename: file.name,
-        contentType: file.type,
-        courseId: id,
-        sessionId,
-      }),
-    });
-
-    if (!res.ok) { alert("Lỗi tạo upload URL"); return; }
-    const { uploadUrl, key } = await res.json();
-
-    // Upload directly to R2
-    const uploadRes = await fetch(uploadUrl, {
-      method: "PUT",
-      body: file,
-      headers: { "Content-Type": file.type },
-    });
-
-    if (!uploadRes.ok) { alert("Lỗi upload file"); return; }
-
-    // Update material with R2 key
+  async function handleFileUpload(sessionId: number, key: string, file: File) {
+    const type = file.type.startsWith("video/") ? "video" : "pdf";
     await fetch(`/api/courses/${id}/sessions/${sessionId}/materials`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        type: file.type.startsWith("video/") ? "video" : "pdf",
+        type,
         title: file.name,
         r2Key: key,
         metadata: { size: file.size, contentType: file.type },
       }),
     });
-
+    toast.success(`Upload ${file.name} thành công!`);
     loadCourse();
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-pulse text-muted-foreground">Đang tải khóa học...</div>
+      <div className="flex items-center justify-center h-[70vh]">
+        <div className="animate-pulse text-muted-foreground">Đang tải...</div>
       </div>
     );
   }
 
   if (!course) return <p>Không tìm thấy khóa học</p>;
 
+  const currentSession = course.sessions.find((s) => s.id === selectedSession);
+
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="h-[calc(100vh-3.5rem)] flex flex-col -my-6 -mx-4">
       {/* Top bar */}
-      <div className="flex items-center justify-between mb-8">
-        <button
-          onClick={() => router.push("/admin/khoa-hoc")}
-          className="text-sm text-muted-foreground hover:text-foreground transition"
-        >
-          ← Quay lại danh sách
-        </button>
-        <div className="flex items-center gap-3">
-          {saving && <span className="text-xs text-muted-foreground">Đang lưu...</span>}
+      <div className="flex items-center justify-between px-6 py-3 border-b bg-white shrink-0">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => router.push("/admin/khoa-hoc")}
+            className="text-sm text-muted-foreground hover:text-foreground transition"
+          >
+            ← Quay lại
+          </button>
+          <input
+            className="text-lg font-semibold bg-transparent border-0 outline-none focus:ring-0 w-80"
+            defaultValue={course.title}
+            onBlur={(e) => {
+              if (e.target.value !== course.title) updateCourse({ title: e.target.value });
+            }}
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant={course.isPublished ? "default" : "secondary"} className="text-xs">
+            {course.isPublished ? "Đã xuất bản" : "Nháp"}
+          </Badge>
           <Button
+            size="sm"
             variant={course.isPublished ? "outline" : "default"}
             onClick={() => updateCourse({ isPublished: !course.isPublished })}
           >
-            {course.isPublished ? "⬇ Chuyển về nháp" : "🚀 Xuất bản"}
+            {course.isPublished ? "Chuyển nháp" : "Xuất bản"}
           </Button>
         </div>
       </div>
 
-      {/* Course header — inline editable */}
-      <div className="mb-10">
-        <input
-          className="text-3xl font-bold w-full bg-transparent border-0 outline-none focus:ring-0 placeholder:text-zinc-300"
-          defaultValue={course.title}
-          placeholder="Tên khóa học..."
-          onBlur={(e) => {
-            if (e.target.value !== course.title) updateCourse({ title: e.target.value });
-          }}
-        />
-        <textarea
-          className="mt-2 w-full text-muted-foreground bg-transparent border-0 outline-none resize-none focus:ring-0 placeholder:text-zinc-300"
-          defaultValue={course.description || ""}
-          placeholder="Thêm mô tả khóa học..."
-          rows={2}
-          onBlur={(e) => {
-            if (e.target.value !== (course.description || "")) updateCourse({ description: e.target.value });
-          }}
-        />
-        <div className="flex items-center gap-2 mt-3">
-          <Badge variant={course.isPublished ? "default" : "secondary"}>
-            {course.isPublished ? "Đã xuất bản" : "Nháp"}
-          </Badge>
-          <span className="text-sm text-muted-foreground">
-            {course.sessions.length} buổi học
-          </span>
-        </div>
-      </div>
+      {/* Two-panel layout */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left panel — Curriculum */}
+        <div className="w-72 border-r bg-zinc-50/50 flex flex-col shrink-0">
+          <div className="px-4 py-3 border-b">
+            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Nội dung ({course.sessions.length} buổi)
+            </h3>
+          </div>
 
-      {/* Sessions */}
-      <div className="mb-6">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">
-          Nội dung khóa học
-        </h2>
+          <ScrollArea className="flex-1">
+            <div className="p-2 space-y-1">
+              {course.sessions.map((session, idx) => {
+                const isSelected = selectedSession === session.id;
+                const hasVideo = session.materials.some((m) => m.type === "video" && m.r2Key);
+                const hasMaterials = session.materials.length > 0;
 
-        <div className="space-y-3">
-          {course.sessions.map((session, idx) => {
-            const isExpanded = expandedSession === session.id;
-
-            return (
-              <div
-                key={session.id}
-                className={`rounded-xl border transition-all ${
-                  isExpanded ? "bg-white shadow-md border-zinc-300" : "bg-zinc-50/50 hover:bg-zinc-50 border-zinc-200"
-                }`}
-              >
-                {/* Session header */}
-                <div
-                  className="flex items-center gap-3 px-5 py-4 cursor-pointer"
-                  onClick={() => setExpandedSession(isExpanded ? null : session.id)}
-                >
-                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-200 text-zinc-600 text-sm font-medium shrink-0">
-                    {idx + 1}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">{session.title}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">
-                      {session.materials.length === 0
-                        ? "Chưa có tài liệu"
-                        : session.materials.map((m) => MATERIAL_ICONS[m.type]).join(" ")}
+                return (
+                  <div
+                    key={session.id}
+                    className={`
+                      group flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-150
+                      ${isSelected
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "hover:bg-zinc-100"
+                      }
+                    `}
+                    onClick={() => setSelectedSession(session.id)}
+                    onDoubleClick={() => {
+                      setEditingTitle(session.id);
+                      setTimeout(() => editTitleRef.current?.focus(), 50);
+                    }}
+                  >
+                    {/* Status indicator */}
+                    <div className={`
+                      w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0
+                      ${isSelected
+                        ? "bg-primary-foreground/20 text-primary-foreground"
+                        : hasVideo
+                          ? "bg-green-100 text-green-700"
+                          : hasMaterials
+                            ? "bg-amber-100 text-amber-700"
+                            : "bg-zinc-200 text-zinc-500"
+                      }
+                    `}>
+                      {hasVideo ? "✓" : idx + 1}
                     </div>
-                  </div>
-                  <span className="text-muted-foreground text-lg">
-                    {isExpanded ? "−" : "+"}
-                  </span>
-                </div>
 
-                {/* Expanded content */}
-                {isExpanded && (
-                  <div className="px-5 pb-5 border-t border-zinc-100">
-                    {/* Materials list */}
-                    {session.materials.length > 0 && (
-                      <div className="mt-4 space-y-2">
-                        {session.materials.map((mat) => (
-                          <div
-                            key={mat.id}
-                            className={`flex items-center justify-between px-4 py-2.5 rounded-lg border ${MATERIAL_COLORS[mat.type]}`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <span className="text-lg">{MATERIAL_ICONS[mat.type]}</span>
-                              <div>
-                                <div className="text-sm font-medium">{mat.title}</div>
-                                {mat.r2Key && (
-                                  <div className="text-xs opacity-60">Đã upload</div>
-                                )}
-                                {mat.externalUrl && (
-                                  <div className="text-xs opacity-60 truncate max-w-xs">
-                                    {mat.externalUrl}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            <button
-                              className="text-xs opacity-50 hover:opacity-100 transition"
-                              onClick={() => deleteMaterial(session.id, mat.id)}
-                            >
-                              Xóa
-                            </button>
-                          </div>
-                        ))}
-                      </div>
+                    {/* Title */}
+                    <div className="flex-1 min-w-0">
+                      {editingTitle === session.id ? (
+                        <input
+                          ref={editTitleRef}
+                          className="w-full bg-white text-foreground text-sm rounded px-1 py-0.5 outline-none"
+                          defaultValue={session.title}
+                          onBlur={(e) => renameSession(session.id, e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") renameSession(session.id, e.currentTarget.value);
+                            if (e.key === "Escape") setEditingTitle(null);
+                          }}
+                        />
+                      ) : (
+                        <span className="text-sm truncate block">{session.title}</span>
+                      )}
+                      {!isSelected && session.materials.length > 0 && (
+                        <span className="text-xs opacity-50">
+                          {session.materials.map((m) => MATERIAL_CONFIG[m.type].icon).join("")}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Delete */}
+                    {isSelected && (
+                      <button
+                        className="text-primary-foreground/50 hover:text-primary-foreground text-xs shrink-0"
+                        onClick={(e) => { e.stopPropagation(); deleteSession(session.id); }}
+                      >
+                        ×
+                      </button>
                     )}
+                  </div>
+                );
+              })}
+            </div>
+          </ScrollArea>
 
-                    {/* Upload dropzone */}
-                    <div
-                      className="mt-4 border-2 border-dashed border-zinc-200 rounded-lg p-6 text-center hover:border-zinc-400 transition cursor-pointer"
-                      onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add("border-primary", "bg-primary/5"); }}
-                      onDragLeave={(e) => { e.currentTarget.classList.remove("border-primary", "bg-primary/5"); }}
-                      onDrop={async (e) => {
-                        e.preventDefault();
-                        e.currentTarget.classList.remove("border-primary", "bg-primary/5");
-                        const file = e.dataTransfer.files[0];
-                        if (file) await uploadFile(session.id, 0, file);
-                      }}
+          {/* Add session */}
+          <div className="p-3 border-t">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-zinc-300 hover:border-zinc-400 transition">
+              <span className="text-zinc-400 text-sm">+</span>
+              <input
+                ref={newSessionRef}
+                className="flex-1 bg-transparent text-sm outline-none placeholder:text-zinc-400"
+                placeholder="Thêm buổi học..."
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") addSession(e.currentTarget.value);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Right panel — Lesson Editor */}
+        <div className="flex-1 overflow-y-auto">
+          {currentSession ? (
+            <div className="max-w-2xl mx-auto px-8 py-8">
+              {/* Session title */}
+              <div className="mb-8">
+                <div className="text-xs text-muted-foreground mb-1">
+                  Buổi {course.sessions.findIndex((s) => s.id === currentSession.id) + 1}
+                </div>
+                <input
+                  className="text-2xl font-bold w-full bg-transparent outline-none placeholder:text-zinc-300"
+                  defaultValue={currentSession.title}
+                  key={currentSession.id + "-title"}
+                  onBlur={(e) => {
+                    if (e.target.value !== currentSession.title) {
+                      renameSession(currentSession.id, e.target.value);
+                    }
+                  }}
+                />
+              </div>
+
+              {/* Video section */}
+              <div className="mb-8">
+                <h4 className="text-sm font-medium text-muted-foreground mb-3">VIDEO BÀI GIẢNG</h4>
+                {currentSession.materials.find((m) => m.type === "video" && m.r2Key) ? (
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-purple-50 border border-purple-200">
+                    <span className="text-2xl">🎬</span>
+                    <div className="flex-1">
+                      <div className="font-medium text-purple-700">
+                        {currentSession.materials.find((m) => m.type === "video")?.title}
+                      </div>
+                      <div className="text-xs text-purple-500">Đã upload</div>
+                    </div>
+                    <button
+                      className="text-xs text-purple-400 hover:text-red-500 transition"
                       onClick={() => {
-                        const input = document.createElement("input");
-                        input.type = "file";
-                        input.accept = "video/*,.pdf,.ppt,.pptx,image/*";
-                        input.onchange = async (e) => {
-                          const file = (e.target as HTMLInputElement).files?.[0];
-                          if (file) await uploadFile(session.id, 0, file);
-                        };
-                        input.click();
+                        const mat = currentSession.materials.find((m) => m.type === "video");
+                        if (mat) deleteMaterial(currentSession.id, mat.id);
                       }}
                     >
-                      <div className="text-2xl mb-1">📁</div>
-                      <div className="text-sm text-muted-foreground">
-                        Kéo thả file hoặc <span className="text-primary font-medium">bấm để upload</span>
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        Video, PDF, Slide, Hình ảnh
-                      </div>
-                    </div>
-
-                    {/* Quick add buttons */}
-                    <div className="flex items-center gap-2 mt-4">
-                      <span className="text-xs text-muted-foreground">Thêm nhanh:</span>
-                      {(["video", "pdf", "recap", "link"] as const).map((type) => (
-                        <button
-                          key={type}
-                          onClick={() => addMaterial(session.id, type)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs rounded-full border border-zinc-200 hover:bg-zinc-100 transition"
-                        >
-                          {MATERIAL_ICONS[type]} {type === "video" ? "Video" : type === "pdf" ? "PDF" : type === "recap" ? "Recap" : "Link"}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Delete session */}
-                    <div className="mt-4 pt-3 border-t border-zinc-100">
-                      <button
-                        className="text-xs text-red-400 hover:text-red-600 transition"
-                        onClick={() => deleteSession(session.id)}
-                      >
-                        Xóa buổi học này
-                      </button>
-                    </div>
+                      Xóa
+                    </button>
                   </div>
+                ) : (
+                  <FileUpload
+                    courseId={id as string}
+                    sessionId={currentSession.id}
+                    accept="video/*"
+                    onUploadComplete={(key, file) => handleFileUpload(currentSession.id, key, file)}
+                  />
                 )}
               </div>
-            );
-          })}
-        </div>
-      </div>
 
-      {/* Add session */}
-      <div className="flex items-center gap-3 py-3 px-5 rounded-xl border-2 border-dashed border-zinc-200 hover:border-zinc-300 transition">
-        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-100 text-zinc-400 text-sm">
-          +
+              {/* Materials section */}
+              <div className="mb-8">
+                <h4 className="text-sm font-medium text-muted-foreground mb-3">TÀI LIỆU</h4>
+
+                {/* Existing materials (non-video) */}
+                <div className="space-y-2 mb-4">
+                  {currentSession.materials
+                    .filter((m) => m.type !== "video")
+                    .map((mat) => {
+                      const config = MATERIAL_CONFIG[mat.type];
+                      return (
+                        <div
+                          key={mat.id}
+                          className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-150 hover:shadow-sm ${config.color}`}
+                        >
+                          <span className="text-lg">{config.icon}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium">{mat.title}</div>
+                            {mat.externalUrl && (
+                              <div className="text-xs opacity-60 truncate">{mat.externalUrl}</div>
+                            )}
+                            {mat.r2Key && (
+                              <div className="text-xs opacity-60">Đã upload</div>
+                            )}
+                            {mat.type === "recap" && !mat.contentText && (
+                              <div className="text-xs opacity-60">Chưa có nội dung</div>
+                            )}
+                          </div>
+                          <button
+                            className="text-xs opacity-40 hover:opacity-100 hover:text-red-600 transition"
+                            onClick={() => deleteMaterial(currentSession.id, mat.id)}
+                          >
+                            Xóa
+                          </button>
+                        </div>
+                      );
+                    })}
+                </div>
+
+                {/* Add material */}
+                <div className="relative">
+                  <button
+                    onClick={() => setAddingMaterial(!addingMaterial)}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-zinc-200 text-sm text-muted-foreground hover:border-zinc-300 hover:text-foreground transition"
+                  >
+                    + Thêm tài liệu
+                  </button>
+
+                  {addingMaterial && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg border p-2 z-10 animate-in fade-in duration-150">
+                      {(["pdf", "recap", "link"] as const).map((type) => (
+                        <button
+                          key={type}
+                          onClick={() => {
+                            addMaterial(currentSession.id, type);
+                            setAddingMaterial(false);
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-zinc-50 transition text-left"
+                        >
+                          <span className="text-lg">{MATERIAL_CONFIG[type].icon}</span>
+                          <div>
+                            <div className="text-sm font-medium">{MATERIAL_CONFIG[type].label}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {type === "pdf" && "Upload slide hoặc tài liệu PDF"}
+                              {type === "recap" && "Tóm tắt nội dung buổi học"}
+                              {type === "link" && "Link Google Docs, Sheets, bài viết"}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+
+                      {/* File upload option */}
+                      <div className="border-t mt-1 pt-1">
+                        <FileUpload
+                          courseId={id as string}
+                          sessionId={currentSession.id}
+                          accept=".pdf,.ppt,.pptx,image/*"
+                          onUploadComplete={(key, file) => {
+                            handleFileUpload(currentSession.id, key, file);
+                            setAddingMaterial(false);
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-full text-muted-foreground">
+              <div className="text-center space-y-2">
+                <div className="text-4xl">📚</div>
+                <p>Chọn một buổi học để chỉnh sửa</p>
+                <p className="text-sm">hoặc thêm buổi học mới từ sidebar bên trái</p>
+              </div>
+            </div>
+          )}
         </div>
-        <input
-          ref={newSessionRef}
-          className="flex-1 bg-transparent border-0 outline-none text-sm placeholder:text-zinc-400"
-          placeholder="Nhập tên buổi học mới và nhấn Enter..."
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              addSession(e.currentTarget.value);
-            }
-          }}
-        />
       </div>
     </div>
   );
