@@ -5,9 +5,9 @@ import { db } from "@/lib/db";
 import { courses } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { getSession } from "@/lib/auth-server";
-import { Button } from "@/components/ui/button";
+import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 import { Card, CardContent } from "@/components/ui/card";
-import { ThemeToggle } from "@/components/theme-toggle";
 
 export default async function CourseCatalogPage() {
   const session = await getSession();
@@ -18,32 +18,13 @@ export default async function CourseCatalogPage() {
   });
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
-        <div className="container mx-auto flex items-center justify-between h-16 px-4">
-          <Link href="/" className="text-xl font-bold">
-            Vuon LMS
-          </Link>
-          <nav className="flex items-center gap-2">
-            <ThemeToggle />
-            {session ? (
-              <Link href="/dashboard">
-                <Button variant="outline" size="sm">Dashboard</Button>
-              </Link>
-            ) : (
-              <Link href="/dang-nhap">
-                <Button variant="outline" size="sm">Đăng nhập</Button>
-              </Link>
-            )}
-          </nav>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-10">
+    <div className="min-h-screen flex flex-col bg-background">
+      <SiteHeader
+        user={session ? { name: session.user.name, email: session.user.email, role: (session.user as any).role } : null}
+      />
+      <main className="flex-1 container mx-auto px-4 py-10">
         <h1 className="text-3xl font-bold mb-2">Khóa học</h1>
-        <p className="text-muted-foreground mb-8">
-          Khám phá các khóa học chất lượng
-        </p>
+        <p className="text-muted-foreground mb-8">Khám phá các khóa học chất lượng</p>
 
         {publishedCourses.length === 0 ? (
           <div className="text-center py-20">
@@ -69,9 +50,7 @@ export default async function CourseCatalogPage() {
                       {course.description || "Khám phá khóa học này"}
                     </p>
                     {course.instructor && (
-                      <p className="text-xs text-muted-foreground mt-4">
-                        {course.instructor.name}
-                      </p>
+                      <p className="text-xs text-muted-foreground mt-4">{course.instructor.name}</p>
                     )}
                   </CardContent>
                 </Card>
@@ -80,6 +59,7 @@ export default async function CourseCatalogPage() {
           </div>
         )}
       </main>
+      <SiteFooter />
     </div>
   );
 }

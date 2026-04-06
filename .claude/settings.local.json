@@ -43,7 +43,9 @@
       "WebFetch(domain:mobbin.com)",
       "WebFetch(domain:www.coursera.org)",
       "WebFetch(domain:medium.com)",
-      "Bash(npx next:*)"
+      "Bash(npx next:*)",
+      "Bash(git commit:*)",
+      "Bash(grep \"\\\\.tsx$\")"
     ]
   }
 }
