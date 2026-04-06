@@ -7,7 +7,20 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:station.railway.com)",
       "Bash(git init:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(git remote:*)",
+      "Bash(git push:*)",
+      "Bash(railway whoami:*)",
+      "Bash(railway add:*)",
+      "Bash(railway variable:*)",
+      "Bash(railway volume:*)",
+      "Bash(railway init:*)",
+      "Bash(railway list:*)",
+      "Bash(python3 -c \"import sys,json; data=json.load\\(sys.stdin\\); workspaces={p['workspace']['name']:p['workspace']['id'] for p in data}; [print\\(f'{name}: {wid}'\\) for name,wid in workspaces.items\\(\\)]\")",
+      "Bash(gh repo:*)",
+      "Bash(railway service:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)"
     ]
   }
 }
