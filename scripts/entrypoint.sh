@@ -1,20 +1,44 @@
 #!/bin/bash
 set -e
 
+echo "=== Vuon LMS Entrypoint ==="
 cd /home/frappe/frappe-bench
 
 # ─── Volume mapping ───
-# Railway mounts volumes at /data. Frappe expects sites at ./sites
-# On first boot, move initial sites content to /data then symlink
-if [ -d "/data" ] && [ ! -L "sites" ]; then
-  echo "Setting up persistent volume at /data..."
-  # Copy initial sites content if /data is empty
-  if [ -z "$(ls -A /data 2>/dev/null)" ]; then
-    cp -a sites/. /data/
+# Railway mounts persistent volumes at /data
+# Frappe expects sites at ./sites — we bridge them
+if [ -d "/data" ]; then
+  echo "Volume detected at /data"
+
+  if [ ! -L "sites" ]; then
+    echo "Initial setup: migrating sites/ to /data volume..."
+
+    # Copy initial sites content to volume if empty
+    if [ -z "$(ls -A /data 2>/dev/null)" ]; then
+      echo "  /data is empty — copying sites/ content..."
+      cp -a sites/. /data/
+      echo "  copied: $(ls /data)"
+    else
+      echo "  /data already has content: $(ls /data)"
+    fi
+
+    # Replace sites dir with symlink to volume
+    rm -rf sites
+    ln -sf /data sites
+    echo "  symlink created: sites -> /data"
+  else
+    echo "sites/ already symlinked to /data"
   fi
-  rm -rf sites
-  ln -sf /data sites
 fi
+
+# Verify apps.txt exists (critical for bench commands)
+if [ ! -f "sites/apps.txt" ]; then
+  echo "WARNING: sites/apps.txt not found! Creating from installed apps..."
+  ls apps/ | grep -v __pycache__ > sites/apps.txt
+  echo "  apps.txt created: $(cat sites/apps.txt)"
+fi
+
+echo "apps.txt contents: $(cat sites/apps.txt)"
 
 # ─── Build Redis URL with optional auth ───
 if [ -n "$REDIS_PASSWORD" ]; then
@@ -24,6 +48,9 @@ else
 fi
 
 # ─── Configure connections ───
+echo "Configuring database: ${DB_HOST:-mariadb}:${DB_PORT:-3306}"
+echo "Configuring Redis: ${REDIS_HOST:-redis}:${REDIS_PORT:-6379}"
+
 bench set-config -g db_host "${DB_HOST:-mariadb}"
 bench set-config -gp db_port "${DB_PORT:-3306}"
 bench set-config -g redis_cache "${REDIS_URL}/0"
@@ -46,7 +73,6 @@ s = socket.socket()
 try:
     s.settimeout(2)
     s.connect(('${DB_HOST:-mariadb}', ${DB_PORT:-3306}))
-    print('connected')
     s.close()
     exit(0)
 except:
@@ -54,6 +80,10 @@ except:
 " 2>/dev/null; then
       echo "Database is ready."
       break
+    fi
+    if [ "$i" -eq 60 ]; then
+      echo "ERROR: Database not reachable after 60 attempts. Exiting."
+      exit 1
     fi
     echo "  attempt $i/60..."
     sleep 3
@@ -75,6 +105,8 @@ fi
 
 # Set default site
 bench use "${SITE_NAME}"
+
+echo "=== Starting Frappe (bench start) ==="
 
 # ─── Run the command (default: bench start) ───
 exec "$@"
