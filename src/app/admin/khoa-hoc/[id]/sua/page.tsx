@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, ChevronDown, Plus, X, Check, ExternalLink, Video, FileText, PenLine, Link as LinkIcon, BookOpen, MousePointerClick, GripVertical, Settings, CircleAlert, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronDown, Plus, X, Check, ExternalLink, Video, FileText, PenLine, Link as LinkIcon, BookOpen, MousePointerClick, GripVertical, Settings, CircleAlert, Trash2, FolderOpen } from "lucide-react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -172,6 +172,8 @@ function ContentBlock({
               key={`recap-${material.id}`}
               content={material.contentText || ""}
               placeholder="Viết nội dung recap cho buổi học này..."
+              courseId={courseId}
+              sessionId={sessionId}
               onUpdate={(html) => save({ contentText: html })}
             />
           )}
@@ -232,6 +234,7 @@ function SortableSessionItem({
   isSelected,
   hasVideo,
   hasContent,
+  isSectionItem,
   editingTitle,
   editTitleRef,
   onSelect,
@@ -245,6 +248,7 @@ function SortableSessionItem({
   isSelected: boolean;
   hasVideo: boolean;
   hasContent: boolean;
+  isSectionItem: boolean;
   editingTitle: number | null;
   editTitleRef: React.RefObject<HTMLInputElement | null>;
   onSelect: () => void;
@@ -266,10 +270,11 @@ function SortableSessionItem({
       ref={setNodeRef}
       style={style}
       className={`
-        group flex items-center gap-1 pl-1 pr-2 py-2.5 rounded-lg cursor-pointer transition-colors
+        group flex items-center gap-1 pr-2 rounded-lg cursor-pointer transition-colors
+        ${isSectionItem ? "pl-1 py-2 mt-3 first:mt-0" : "pl-6 py-2.5"}
         ${isSelected ? "bg-primary/10 ring-1 ring-primary/20" : "hover:bg-muted/70"}
       `}
-      onClick={onSelect}
+      onClick={isSectionItem ? undefined : onSelect}
       onDoubleClick={onDoubleClick}
     >
       <button
@@ -280,19 +285,23 @@ function SortableSessionItem({
         <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
       </button>
 
-      <div className={`
-        w-6 h-6 rounded-md flex items-center justify-center text-xs font-semibold shrink-0 transition
-        ${isSelected
-          ? "bg-primary text-primary-foreground"
-          : hasVideo
-            ? "bg-success/15 text-success"
-            : hasContent
-              ? "bg-warning/15 text-warning"
-              : "bg-muted text-muted-foreground"
-        }
-      `}>
-        {hasVideo ? <Check className="w-3 h-3" /> : idx + 1}
-      </div>
+      {isSectionItem ? (
+        <FolderOpen className="w-4 h-4 text-muted-foreground shrink-0" />
+      ) : (
+        <div className={`
+          w-6 h-6 rounded-md flex items-center justify-center text-xs font-semibold shrink-0 transition
+          ${isSelected
+            ? "bg-primary text-primary-foreground"
+            : hasVideo
+              ? "bg-success/15 text-success"
+              : hasContent
+                ? "bg-warning/15 text-warning"
+                : "bg-muted text-muted-foreground"
+          }
+        `}>
+          {hasVideo ? <Check className="w-3 h-3" /> : idx + 1}
+        </div>
+      )}
 
       <div className="flex-1 min-w-0 ml-1.5">
         {editingTitle === session.id ? (
@@ -307,7 +316,7 @@ function SortableSessionItem({
             }}
           />
         ) : (
-          <span className={`text-sm truncate block ${isSelected ? "font-medium" : ""}`}>
+          <span className={`truncate block ${isSectionItem ? "text-xs font-bold uppercase tracking-wider text-muted-foreground" : `text-sm ${isSelected ? "font-medium" : ""}`}`}>
             {session.title}
           </span>
         )}
@@ -382,6 +391,26 @@ export default function EditCoursePage() {
     if (newSessionRef.current) newSessionRef.current.value = "";
     await loadCourse();
     setSelectedSession(session.id);
+  }
+
+  async function addSection(title: string) {
+    if (!title.trim()) return;
+    const res = await fetch(`/api/courses/${id}/sessions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, description: JSON.stringify({ isSection: true }) }),
+    });
+    toast.success("Đã thêm section!");
+    await loadCourse();
+  }
+
+  function isSection(session: Session): boolean {
+    try {
+      const desc = JSON.parse(session.description || "{}");
+      return desc.isSection === true;
+    } catch {
+      return false;
+    }
   }
 
   async function renameSession(sessionId: number, title: string) {
@@ -643,26 +672,31 @@ export default function EditCoursePage() {
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={course.sessions.map((s) => s.id)} strategy={verticalListSortingStrategy}>
                   <div className="p-2 space-y-0.5">
-                    {course.sessions.map((session, idx) => (
-                      <SortableSessionItem
-                        key={session.id}
-                        session={session}
-                        idx={idx}
-                        isSelected={selectedSession === session.id}
-                        hasVideo={session.materials.some((m) => m.type === "video" && m.r2Key)}
-                        hasContent={session.materials.length > 0}
-                        editingTitle={editingTitle}
-                        editTitleRef={editTitleRef}
-                        onSelect={() => setSelectedSession(session.id)}
-                        onDoubleClick={() => {
-                          setEditingTitle(session.id);
-                          setTimeout(() => editTitleRef.current?.focus(), 50);
-                        }}
-                        onRename={(title) => renameSession(session.id, title)}
-                        onCancelEdit={() => setEditingTitle(null)}
-                        onDelete={() => setDeleteSessionTarget(session)}
-                      />
-                    ))}
+                    {course.sessions.map((session, idx) => {
+                      const isSect = isSection(session);
+                      const lessonIdx = isSect ? 0 : course.sessions.slice(0, idx).filter((s) => !isSection(s)).length;
+                      return (
+                        <SortableSessionItem
+                          key={session.id}
+                          session={session}
+                          idx={lessonIdx}
+                          isSelected={selectedSession === session.id}
+                          hasVideo={session.materials.some((m) => m.type === "video" && m.r2Key)}
+                          hasContent={session.materials.length > 0}
+                          isSectionItem={isSect}
+                          editingTitle={editingTitle}
+                          editTitleRef={editTitleRef}
+                          onSelect={() => !isSect && setSelectedSession(session.id)}
+                          onDoubleClick={() => {
+                            setEditingTitle(session.id);
+                            setTimeout(() => editTitleRef.current?.focus(), 50);
+                          }}
+                          onRename={(title) => renameSession(session.id, title)}
+                          onCancelEdit={() => setEditingTitle(null)}
+                          onDelete={() => setDeleteSessionTarget(session)}
+                        />
+                      );
+                    })}
                   </div>
                 </SortableContext>
               </DndContext>
@@ -681,8 +715,18 @@ export default function EditCoursePage() {
                   }}
                 />
               </div>
+              <button
+                onClick={() => {
+                  const title = prompt("Tên section:");
+                  if (title) addSection(title);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2 mt-2 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition"
+              >
+                <FolderOpen className="w-3.5 h-3.5" />
+                Thêm section
+              </button>
               <p className="text-[10px] text-muted-foreground/60 mt-1.5 px-1">
-                Nhấn Enter để thêm. Nhấp đôi để đổi tên.
+                Enter để thêm buổi học. Nhấp đôi để đổi tên.
               </p>
             </div>
           </div>

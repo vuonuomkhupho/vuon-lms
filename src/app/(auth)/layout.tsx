@@ -7,7 +7,7 @@ export default function AuthLayout({
 }) {
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <header className="border-b">
+      <header className="border-b-2 border-foreground">
         <div className="container mx-auto flex items-center h-16 px-4">
           <Link href="/" className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">

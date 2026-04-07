@@ -22,6 +22,7 @@ interface Material {
 interface Session {
   id: number;
   title: string;
+  description?: string | null;
   materials: Material[];
 }
 
@@ -119,6 +120,20 @@ export function LessonClient({
                 const isCurrent = i === currentIndex;
                 const isDone = completedSet.has(session.id) || (i === currentIndex && completed);
 
+                // Check if this is a section header
+                let isSect = false;
+                try { isSect = JSON.parse(session.description || "{}").isSection === true; } catch {}
+
+                if (isSect) {
+                  return (
+                    <div key={session.id} className="px-4 pt-5 pb-1 first:pt-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                        {session.title}
+                      </span>
+                    </div>
+                  );
+                }
+
                 return (
                   <Link
                     key={session.id}
@@ -134,7 +149,7 @@ export function LessonClient({
                     <div className="mt-0.5 shrink-0">
                       {isDone ? (
                         <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                          <circle cx="10" cy="10" r="10" className="fill-green-500"/>
+                          <circle cx="10" cy="10" r="10" className="fill-success"/>
                           <path d="M6 10l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                       ) : (
@@ -144,11 +159,8 @@ export function LessonClient({
                       )}
                     </div>
                     <div className="min-w-0">
-                      <div className={`text-[13px] leading-snug ${isCurrent ? "font-semibold" : isDone ? "text-muted-foreground" : ""}`}>
+                      <div className={`text-sm leading-snug ${isCurrent ? "font-semibold" : isDone ? "text-muted-foreground" : ""}`}>
                         {session.title}
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        Buổi {i + 1}
                       </div>
                     </div>
                   </Link>

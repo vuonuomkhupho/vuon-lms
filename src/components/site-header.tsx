@@ -9,7 +9,7 @@ interface SiteHeaderProps {
 
 export function SiteHeader({ user }: SiteHeaderProps) {
   return (
-    <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
+    <header className="border-b-2 border-foreground bg-background sticky top-0 z-50">
       <div className="container mx-auto flex items-center justify-between h-16 px-4">
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-2">
