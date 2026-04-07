@@ -50,83 +50,85 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --shadow-brutal: 4px 4px 0px 0px var(--foreground);
+  --shadow-brutal-sm: 2px 2px 0px 0px var(--foreground);
 }
 
 :root {
-  --background: #FFFFFF;
-  --foreground: #1F1F1F;
+  --background: #FFFBF5;
+  --foreground: #1A1A1A;
   --card: #FFFFFF;
-  --card-foreground: #1F1F1F;
+  --card-foreground: #1A1A1A;
   --popover: #FFFFFF;
-  --popover-foreground: #1F1F1F;
-  --primary: #0056D2;
+  --popover-foreground: #1A1A1A;
+  --primary: #3B82F6;
   --primary-foreground: #FFFFFF;
-  --secondary: #F5F5F5;
-  --secondary-foreground: #1F1F1F;
-  --muted: #F5F5F5;
-  --muted-foreground: #636363;
-  --accent: #F5F5F5;
-  --accent-foreground: #1F1F1F;
-  --destructive: #E30B5C;
-  --border: #E0E0E0;
-  --input: #E0E0E0;
-  --ring: #0056D2;
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --secondary: #FEF3C7;
+  --secondary-foreground: #1A1A1A;
+  --muted: #F5F0E8;
+  --muted-foreground: #6B6B6B;
+  --accent: #DBEAFE;
+  --accent-foreground: #1A1A1A;
+  --destructive: #EF4444;
+  --border: #1A1A1A;
+  --input: #1A1A1A;
+  --ring: #3B82F6;
+  --chart-1: #3B82F6;
+  --chart-2: #EF4444;
+  --chart-3: #10B981;
+  --chart-4: #F59E0B;
+  --chart-5: #8B5CF6;
   --success: #10B981;
   --success-foreground: #FFFFFF;
   --warning: #F59E0B;
-  --warning-foreground: #1F1F1F;
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --warning-foreground: #1A1A1A;
+  --radius: 0.5rem;
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #1A1A1A;
+  --sidebar-primary: #1A1A1A;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F5F0E8;
+  --sidebar-accent-foreground: #1A1A1A;
+  --sidebar-border: #1A1A1A;
+  --sidebar-ring: #3B82F6;
 }
 
 .dark {
   --background: #0A0A0A;
-  --foreground: #FAFAFA;
-  --card: #141414;
-  --card-foreground: #FAFAFA;
-  --popover: #141414;
-  --popover-foreground: #FAFAFA;
-  --primary: #4D94FF;
-  --primary-foreground: #FFFFFF;
-  --secondary: #1F1F1F;
-  --secondary-foreground: #FAFAFA;
-  --muted: #1F1F1F;
-  --muted-foreground: #A0A0A0;
-  --accent: #1F1F1F;
-  --accent-foreground: #FAFAFA;
-  --destructive: #FF4D6A;
-  --border: #2A2A2A;
-  --input: #2A2A2A;
-  --ring: #4D94FF;
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --foreground: #F5F5F5;
+  --card: #161616;
+  --card-foreground: #F5F5F5;
+  --popover: #161616;
+  --popover-foreground: #F5F5F5;
+  --primary: #60A5FA;
+  --primary-foreground: #0A0A0A;
+  --secondary: #2A2A2A;
+  --secondary-foreground: #F5F5F5;
+  --muted: #1E1E1E;
+  --muted-foreground: #999999;
+  --accent: #1E293B;
+  --accent-foreground: #F5F5F5;
+  --destructive: #F87171;
+  --border: #404040;
+  --input: #404040;
+  --ring: #60A5FA;
+  --chart-1: #60A5FA;
+  --chart-2: #F87171;
+  --chart-3: #34D399;
+  --chart-4: #FBBF24;
+  --chart-5: #A78BFA;
   --success: #34D399;
   --success-foreground: #0A0A0A;
   --warning: #FBBF24;
   --warning-foreground: #0A0A0A;
-  --sidebar: #141414;
-  --sidebar-foreground: #FAFAFA;
-  --sidebar-primary: #4D94FF;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #1F1F1F;
-  --sidebar-accent-foreground: #FAFAFA;
-  --sidebar-border: #2A2A2A;
-  --sidebar-ring: #4D94FF;
+  --sidebar: #161616;
+  --sidebar-foreground: #F5F5F5;
+  --sidebar-primary: #60A5FA;
+  --sidebar-primary-foreground: #0A0A0A;
+  --sidebar-accent: #1E1E1E;
+  --sidebar-accent-foreground: #F5F5F5;
+  --sidebar-border: #404040;
+  --sidebar-ring: #60A5FA;
 }
 
 @layer base {
@@ -139,6 +141,20 @@
   html {
     @apply font-sans;
   }
+}
+
+/* ─── Neobrutalism utilities ─── */
+
+.shadow-brutal {
+  box-shadow: var(--shadow-brutal);
+}
+
+.shadow-brutal-sm {
+  box-shadow: var(--shadow-brutal-sm);
+}
+
+.hover\:shadow-brutal:hover {
+  box-shadow: var(--shadow-brutal);
 }
 
 @keyframes fade-in-up {

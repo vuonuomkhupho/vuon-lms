@@ -71,5 +71,5 @@ export const uploadRequestSchema = z.object({
   filename: z.string().min(1).max(255),
   contentType: z.string().min(1).max(100),
   courseId: z.union([z.string(), z.number()]),
-  sessionId: z.number().int().positive(),
+  sessionId: z.number().int().min(0), // 0 for course thumbnails
 });

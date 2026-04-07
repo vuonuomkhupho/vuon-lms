@@ -31,7 +31,10 @@ export function FileUpload({ courseId, sessionId, accept, onUploadComplete }: Fi
         body: JSON.stringify({ filename: file.name, contentType: file.type, courseId, sessionId }),
       });
 
-      if (!res.ok) throw new Error("Không thể tạo upload URL");
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Không thể tạo upload URL (${res.status})`);
+      }
       const { uploadUrl, key } = await res.json();
       setProgress(15);
 
@@ -44,9 +47,9 @@ export function FileUpload({ courseId, sessionId, accept, onUploadComplete }: Fi
         });
         xhr.addEventListener("load", () => {
           if (xhr.status >= 200 && xhr.status < 300) { setProgress(100); resolve(); }
-          else reject(new Error(`Upload failed: ${xhr.status}`));
+          else reject(new Error(`Upload thất bại (${xhr.status}). Kiểm tra kết nối và cấu hình R2 CORS.`));
         });
-        xhr.addEventListener("error", () => reject(new Error("Upload failed")));
+        xhr.addEventListener("error", () => reject(new Error("Upload thất bại. Có thể do CORS chưa được cấu hình trên R2 bucket.")));
         xhr.open("PUT", uploadUrl);
         xhr.setRequestHeader("Content-Type", file.type);
         xhr.send(file);

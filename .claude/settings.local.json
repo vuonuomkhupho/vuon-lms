@@ -45,7 +45,9 @@
       "WebFetch(domain:medium.com)",
       "Bash(npx next:*)",
       "Bash(git commit:*)",
-      "Bash(grep \"\\\\.tsx$\")"
+      "Bash(grep \"\\\\.tsx$\")",
+      "Bash(gh issue:*)",
+      "Bash(xargs grep:*)"
     ]
   }
 }

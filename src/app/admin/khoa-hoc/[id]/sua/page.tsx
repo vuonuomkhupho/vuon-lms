@@ -19,6 +19,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { FileUpload } from "@/components/file-upload";
+import { RichTextEditor } from "@/components/rich-text-editor";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { toast } from "sonner";
 
@@ -167,12 +168,11 @@ function ContentBlock({
           )}
 
           {material.type === "recap" && (
-            <Textarea
-              className="min-h-[180px] resize-y border-dashed"
-              defaultValue={material.contentText || ""}
+            <RichTextEditor
               key={`recap-${material.id}`}
+              content={material.contentText || ""}
               placeholder="Viết nội dung recap cho buổi học này..."
-              onBlur={(e) => save({ contentText: e.target.value })}
+              onUpdate={(html) => save({ contentText: html })}
             />
           )}
 
