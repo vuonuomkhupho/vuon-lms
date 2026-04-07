@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { db } from "@/lib/db";
-import { courses, enrollments } from "@/lib/schema";
-import { eq, count } from "drizzle-orm";
+import { courses } from "@/lib/schema";
+import { eq } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -14,42 +15,35 @@ export default async function Home() {
     limit: 6,
   });
 
-  const [{ value: totalStudents }] = await db
-    .select({ value: count() })
-    .from(enrollments);
-
   return (
     <>
       {/* Hero */}
-      <section className="flex items-center justify-center py-20 md:py-32">
-        <div className="container mx-auto px-6 lg:px-8 text-center max-w-4xl">
-          <h1 className="text-5xl md:text-7xl font-black tracking-tight leading-[1.1]">
-            Nền tảng học
-            <br />
-            <span className="bg-primary text-primary-foreground px-4 py-1 rounded-lg border-2 border-foreground shadow-brutal inline-block mt-2">trực tuyến</span>
-          </h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-xl mx-auto mt-8">
-            Tiếp cận kiến thức chất lượng mọi lúc, mọi nơi.
-            Học theo tốc độ của riêng bạn.
-          </p>
-          <div className="flex gap-4 justify-center mt-10">
-            <Link href="/khoa-hoc">
-              <Button size="lg" className="text-base px-8">Xem khóa học</Button>
-            </Link>
-            <Link href="/dang-ky">
-              <Button size="lg" variant="outline" className="text-base px-8">Đăng ký miễn phí</Button>
-            </Link>
-          </div>
-
-          {/* Stats */}
-          <div className="flex items-center justify-center gap-6 mt-14">
-            <div className="bg-card border-2 border-foreground rounded-lg px-6 py-3 shadow-brutal-sm">
-              <span className="text-3xl font-black text-foreground block">{publishedCourses.length}</span>
-              <span className="text-sm font-medium text-muted-foreground">Khóa học</span>
+      <section className="py-24 md:py-36">
+        <div className="container mx-auto px-6 lg:px-8 max-w-5xl">
+          <div className="max-w-3xl">
+            <div className="inline-block bg-[#D1FAE5] border-2 border-foreground rounded-lg px-3 py-1 text-sm font-bold mb-6 shadow-brutal-sm">
+              100% miễn phí
             </div>
-            <div className="bg-card border-2 border-foreground rounded-lg px-6 py-3 shadow-brutal-sm">
-              <span className="text-3xl font-black text-foreground block">{totalStudents}</span>
-              <span className="text-sm font-medium text-muted-foreground">Học viên</span>
+            <h1 className="text-5xl md:text-7xl font-black tracking-tight leading-[1.05]">
+              Học mọi thứ,{" "}
+              <span className="underline decoration-primary decoration-4 underline-offset-4">mọi lúc</span>,{" "}
+              mọi nơi.
+            </h1>
+            <p className="text-xl md:text-2xl text-muted-foreground mt-6 max-w-2xl leading-relaxed">
+              Nền tảng học trực tuyến dành cho người Việt. Tiếp cận kiến thức chất lượng — học theo tốc độ của riêng bạn.
+            </p>
+            <div className="flex flex-wrap gap-4 mt-10">
+              <Link href="/khoa-hoc">
+                <Button size="lg" className="text-base px-8 h-14">
+                  Xem khóa học
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </Button>
+              </Link>
+              <Link href="/dang-ky">
+                <Button size="lg" variant="outline" className="text-base px-8 h-14">
+                  Đăng ký miễn phí
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
@@ -57,37 +51,48 @@ export default async function Home() {
 
       {/* Featured courses */}
       {publishedCourses.length > 0 && (
-        <section className="border-t bg-muted/30 py-16 md:py-20">
-          <div className="container mx-auto px-4">
-            <div className="flex items-center justify-between mb-8">
+        <section className="border-t-2 border-foreground bg-[#DBEAFE] dark:bg-primary/10 py-20 md:py-24">
+          <div className="container mx-auto px-6 lg:px-8">
+            <div className="flex items-end justify-between mb-10">
               <div>
-                <h2 className="text-2xl font-bold">Khóa học nổi bật</h2>
-                <p className="text-muted-foreground mt-1">Bắt đầu hành trình học tập của bạn</p>
+                <h2 className="text-3xl md:text-4xl font-black">Khóa học nổi bật</h2>
+                <p className="text-muted-foreground mt-2 text-lg">Bắt đầu hành trình học tập của bạn</p>
               </div>
-              <Link href="/khoa-hoc">
-                <Button variant="outline" size="sm">Xem tất cả</Button>
+              <Link href="/khoa-hoc" className="hidden md:block">
+                <Button variant="outline" size="sm">
+                  Xem tất cả
+                  <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                </Button>
               </Link>
             </div>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {publishedCourses.map((course) => (
                 <Link key={course.id} href={`/khoa-hoc/${course.slug}`}>
-                  <Card className="h-full hover:shadow-md transition-shadow cursor-pointer group">
+                  <Card className="h-full cursor-pointer group hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_var(--foreground)] transition-all">
                     <CardContent className="p-6">
-                      <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">
+                      <h3 className="font-bold text-lg group-hover:text-primary transition-colors">
                         {course.title}
                       </h3>
                       <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
                         {course.description || "Khám phá khóa học này"}
                       </p>
                       {course.instructor && (
-                        <p className="text-xs text-muted-foreground mt-4">
-                          {course.instructor.name}
-                        </p>
+                        <div className="flex items-center gap-2 mt-5 pt-4 border-t">
+                          <div className="w-6 h-6 rounded bg-secondary border border-foreground flex items-center justify-center text-[10px] font-bold">
+                            {course.instructor.name.charAt(0)}
+                          </div>
+                          <span className="text-sm font-medium">{course.instructor.name}</span>
+                        </div>
                       )}
                     </CardContent>
                   </Card>
                 </Link>
               ))}
+            </div>
+            <div className="mt-8 text-center md:hidden">
+              <Link href="/khoa-hoc">
+                <Button variant="outline">Xem tất cả khóa học</Button>
+              </Link>
             </div>
           </div>
         </section>
