@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { BookOpen, Users, Layers, BarChart3 } from "lucide-react";
+import { BookOpen, Users, Layers, BarChart3, ArrowRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface Stats {
@@ -29,10 +30,10 @@ interface Stats {
 }
 
 const STAT_CARDS = [
-  { key: "totalCourses" as const, label: "Khóa học", icon: BookOpen, color: "text-blue-600 dark:text-blue-400 bg-blue-500/10" },
-  { key: "publishedCourses" as const, label: "Đã xuất bản", icon: BarChart3, color: "text-success bg-success/10" },
-  { key: "totalStudents" as const, label: "Học viên", icon: Users, color: "text-purple-600 dark:text-purple-400 bg-purple-500/10" },
-  { key: "totalSessions" as const, label: "Buổi học", icon: Layers, color: "text-amber-600 dark:text-amber-400 bg-amber-500/10" },
+  { key: "totalCourses" as const, label: "Khóa học", icon: BookOpen, bg: "bg-[#DBEAFE]", iconBg: "bg-[#3B82F6]", iconColor: "text-white" },
+  { key: "publishedCourses" as const, label: "Đã xuất bản", icon: BarChart3, bg: "bg-[#D1FAE5]", iconBg: "bg-[#10B981]", iconColor: "text-white" },
+  { key: "totalStudents" as const, label: "Học viên", icon: Users, bg: "bg-[#FEF3C7]", iconBg: "bg-[#F59E0B]", iconColor: "text-white" },
+  { key: "totalSessions" as const, label: "Buổi học", icon: Layers, bg: "bg-[#EDE9FE]", iconBg: "bg-[#8B5CF6]", iconColor: "text-white" },
 ];
 
 export default function AdminDashboardPage() {
@@ -48,17 +49,17 @@ export default function AdminDashboardPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Skeleton className="h-9 w-64 mb-2" />
-        <Skeleton className="h-5 w-48 mb-8" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+      <div className="container mx-auto px-6 lg:px-8 py-10">
+        <Skeleton className="h-10 w-72 mb-2" />
+        <Skeleton className="h-5 w-56 mb-10" />
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-10">
           {[1, 2, 3, 4].map((i) => (
-            <Card key={i}><CardContent className="p-6"><Skeleton className="h-16 w-full" /></CardContent></Card>
+            <Skeleton key={i} className="h-32 rounded-lg" />
           ))}
         </div>
         <div className="grid gap-6 lg:grid-cols-2">
-          <Card><CardContent className="p-6"><Skeleton className="h-48 w-full" /></CardContent></Card>
-          <Card><CardContent className="p-6"><Skeleton className="h-48 w-full" /></CardContent></Card>
+          <Skeleton className="h-72 rounded-lg" />
+          <Skeleton className="h-72 rounded-lg" />
         </div>
       </div>
     );
@@ -67,26 +68,27 @@ export default function AdminDashboardPage() {
   if (!stats) return null;
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold">Tổng quan</h1>
-        <p className="text-muted-foreground text-sm mt-1">Tình hình hoạt động của nền tảng</p>
+    <div className="container mx-auto px-6 lg:px-8 py-10">
+      <div className="mb-10">
+        <h1 className="text-3xl font-black">Tổng quan</h1>
+        <p className="text-muted-foreground mt-1">Tình hình hoạt động của nền tảng</p>
       </div>
 
-      {/* Stat cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+      {/* Stat cards — bold colored backgrounds */}
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-10">
         {STAT_CARDS.map((stat) => (
-          <Card key={stat.key}>
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${stat.color}`}>
-                <stat.icon className="w-6 h-6" />
+          <div
+            key={stat.key}
+            className={`${stat.bg} rounded-lg border-2 border-foreground p-6 shadow-brutal transition-transform hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_var(--foreground)]`}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className={`w-11 h-11 rounded-lg ${stat.iconBg} flex items-center justify-center border-2 border-foreground shadow-brutal-sm`}>
+                <stat.icon className={`w-5 h-5 ${stat.iconColor}`} />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{stats[stat.key]}</p>
-                <p className="text-xs text-muted-foreground">{stat.label}</p>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+            <p className="text-4xl font-black tracking-tight">{stats[stat.key]}</p>
+            <p className="text-sm font-semibold mt-1 text-foreground/70">{stat.label}</p>
+          </div>
         ))}
       </div>
 
@@ -94,23 +96,32 @@ export default function AdminDashboardPage() {
         {/* Recent enrollments */}
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold">Ghi danh gần đây</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-bold">Ghi danh gần đây</h2>
               <Link href="/admin/hoc-vien">
-                <Button variant="ghost" size="sm">Xem tất cả</Button>
+                <Button variant="outline" size="sm">
+                  Xem tất cả
+                  <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                </Button>
               </Link>
             </div>
             {stats.recentEnrollments.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">Chưa có ghi danh nào</p>
+              <div className="py-12 text-center">
+                <Users className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+                <p className="text-muted-foreground font-medium">Chưa có ghi danh nào</p>
+              </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {stats.recentEnrollments.map((e) => (
-                  <div key={e.id} className="flex items-center justify-between text-sm">
-                    <div className="min-w-0">
-                      <p className="font-medium truncate">{e.studentName}</p>
+                  <div key={e.id} className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-secondary border-2 border-foreground flex items-center justify-center text-xs font-bold shrink-0">
+                      {e.studentName.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm truncate">{e.studentName}</p>
                       <p className="text-xs text-muted-foreground truncate">{e.courseTitle}</p>
                     </div>
-                    <span className="text-xs text-muted-foreground shrink-0 ml-2">
+                    <span className="text-xs text-muted-foreground shrink-0">
                       {new Date(e.enrolledAt).toLocaleDateString("vi-VN")}
                     </span>
                   </div>
@@ -123,25 +134,35 @@ export default function AdminDashboardPage() {
         {/* Top courses */}
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold">Khóa học</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-bold">Khóa học</h2>
               <Link href="/admin/khoa-hoc">
-                <Button variant="ghost" size="sm">Quản lý</Button>
+                <Button variant="outline" size="sm">
+                  Quản lý
+                  <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                </Button>
               </Link>
             </div>
             {stats.courseStats.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">Chưa có khóa học nào</p>
+              <div className="py-12 text-center">
+                <BookOpen className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+                <p className="text-muted-foreground font-medium">Chưa có khóa học nào</p>
+              </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {stats.courseStats.slice(0, 5).map((course) => (
-                  <Link key={course.id} href={`/admin/khoa-hoc/${course.id}/sua`} className="flex items-center justify-between text-sm hover:bg-muted/50 -mx-2 px-2 py-1.5 rounded-lg transition">
-                    <div className="min-w-0">
-                      <p className="font-medium truncate">{course.title}</p>
+                  <Link
+                    key={course.id}
+                    href={`/admin/khoa-hoc/${course.id}/sua`}
+                    className="flex items-center justify-between py-3 px-3 -mx-3 rounded-lg hover:bg-muted transition group"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-sm group-hover:text-primary transition truncate">{course.title}</p>
                       <p className="text-xs text-muted-foreground">{course.enrollmentCount} học viên</p>
                     </div>
-                    <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ml-2 ${course.isPublished ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
+                    <Badge variant={course.isPublished ? "default" : "secondary"}>
                       {course.isPublished ? "Xuất bản" : "Nháp"}
-                    </span>
+                    </Badge>
                   </Link>
                 ))}
               </div>

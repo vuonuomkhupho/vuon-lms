@@ -15,27 +15,27 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      <header className="border-b-2 border-foreground bg-background sticky top-0 z-50">
-        <div className="container mx-auto flex items-center justify-between h-16 px-4">
-          <div className="flex items-center gap-6">
-            <Link href="/admin" className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground text-xs font-bold">V</span>
+    <div className="min-h-screen bg-background">
+      <header className="border-b-2 border-foreground bg-[#DBEAFE] dark:bg-primary/20 sticky top-0 z-50">
+        <div className="container mx-auto flex items-center justify-between h-16 px-6 lg:px-8">
+          <div className="flex items-center gap-5">
+            <Link href="/admin" className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-foreground flex items-center justify-center border-2 border-foreground shadow-brutal-sm">
+                <span className="text-background text-sm font-black">V</span>
               </div>
-              <span className="font-semibold hidden sm:inline">Vuon Admin</span>
+              <span className="font-bold text-lg hidden sm:inline">Vuon Admin</span>
             </Link>
-            <div className="w-px h-6 bg-border hidden sm:block" />
-            <nav className="flex items-center gap-1 text-sm">
+            <div className="w-px h-7 bg-foreground/20 hidden sm:block" />
+            <nav className="flex items-center gap-1">
               <Link
                 href="/admin/khoa-hoc"
-                className="px-3 py-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition"
+                className="px-3.5 py-2 rounded-lg font-medium text-sm hover:bg-foreground/10 transition"
               >
                 Khóa học
               </Link>
               <Link
                 href="/admin/hoc-vien"
-                className="px-3 py-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition"
+                className="px-3.5 py-2 rounded-lg font-medium text-sm hover:bg-foreground/10 transition"
               >
                 Học viên
               </Link>
@@ -45,11 +45,11 @@ export default async function AdminLayout({
             <ThemeToggle />
             <Link
               href="/dashboard"
-              className="text-sm text-muted-foreground hover:text-foreground transition px-3 py-1.5 rounded-md hover:bg-muted"
+              className="text-sm font-medium hover:bg-foreground/10 transition px-3.5 py-2 rounded-lg"
             >
-              Về trang chủ
+              Trang chủ
             </Link>
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
+            <div className="w-9 h-9 rounded-lg bg-foreground border-2 border-foreground flex items-center justify-center text-background text-sm font-bold shadow-brutal-sm">
               {session.user.name?.charAt(0).toUpperCase() || "A"}
             </div>
           </div>

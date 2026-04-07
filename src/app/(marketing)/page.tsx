@@ -22,17 +22,17 @@ export default async function Home() {
     <>
       {/* Hero */}
       <section className="flex items-center justify-center py-20 md:py-32">
-        <div className="container mx-auto px-4 text-center max-w-4xl">
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-tight">
+        <div className="container mx-auto px-6 lg:px-8 text-center max-w-4xl">
+          <h1 className="text-5xl md:text-7xl font-black tracking-tight leading-[1.1]">
             Nền tảng học
             <br />
-            <span className="text-primary">trực tuyến</span>
+            <span className="bg-primary text-primary-foreground px-4 py-1 rounded-lg border-2 border-foreground shadow-brutal inline-block mt-2">trực tuyến</span>
           </h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-xl mx-auto mt-6">
+          <p className="text-lg md:text-xl text-muted-foreground max-w-xl mx-auto mt-8">
             Tiếp cận kiến thức chất lượng mọi lúc, mọi nơi.
             Học theo tốc độ của riêng bạn.
           </p>
-          <div className="flex gap-3 justify-center mt-8">
+          <div className="flex gap-4 justify-center mt-10">
             <Link href="/khoa-hoc">
               <Button size="lg" className="text-base px-8">Xem khóa học</Button>
             </Link>
@@ -42,15 +42,14 @@ export default async function Home() {
           </div>
 
           {/* Stats */}
-          <div className="flex items-center justify-center gap-8 mt-12 text-sm text-muted-foreground">
-            <div>
-              <span className="text-2xl font-bold text-foreground block">{publishedCourses.length}</span>
-              Khóa học
+          <div className="flex items-center justify-center gap-6 mt-14">
+            <div className="bg-card border-2 border-foreground rounded-lg px-6 py-3 shadow-brutal-sm">
+              <span className="text-3xl font-black text-foreground block">{publishedCourses.length}</span>
+              <span className="text-sm font-medium text-muted-foreground">Khóa học</span>
             </div>
-            <div className="w-px h-8 bg-border" />
-            <div>
-              <span className="text-2xl font-bold text-foreground block">{totalStudents}</span>
-              Học viên
+            <div className="bg-card border-2 border-foreground rounded-lg px-6 py-3 shadow-brutal-sm">
+              <span className="text-3xl font-black text-foreground block">{totalStudents}</span>
+              <span className="text-sm font-medium text-muted-foreground">Học viên</span>
             </div>
           </div>
         </div>
